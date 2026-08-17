@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.test/schemas/phase-result.schema.json",
+  "title": "AI Business Ops Agent Phase Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "phase", "status", "branch", "baseline_commit", "commit",
+    "changed_files", "commands", "tests", "review_attempts", "findings", "blockers",
+    "evidence", "human_uat", "known_limitations"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "phase": {"type": "string", "pattern": "^0[1-8]$"},
+    "status": {"enum": ["READY_FOR_HUMAN_REVIEW", "BLOCKED", "FAILED"]},
+    "branch": {"type": "string", "pattern": "^phase/0[1-8]-[a-z0-9-]+$"},
+    "baseline_commit": {"type": ["string", "null"]},
+    "commit": {"type": ["string", "null"]},
+    "changed_files": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["path", "change", "allowlist_category"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "change": {"enum": ["created", "modified", "deleted"]},
+          "allowlist_category": {"enum": ["MAY_CREATE", "MAY_MODIFY", "MAY_DELETE"]}
+        }
+      }
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["command", "attempt", "exit_code", "evidence_path"],
+        "properties": {
+          "command": {"type": "string"}, "attempt": {"type": "integer", "minimum": 1},
+          "exit_code": {"type": "integer"}, "evidence_path": {"type": "string"}
+        }
+      }
+    },
+    "tests": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "result", "evidence_path"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^P0[1-8]-[0-9]{3}$"},
+          "result": {"enum": ["PASSED", "FAILED", "BLOCKED", "NOT_RUN"]},
+          "evidence_path": {"type": "string"},
+          "negative_side_effect_count": {"type": "integer", "minimum": 0}
+        }
+      }
+    },
+    "review_attempts": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["attempt", "result", "evidence_path"],
+        "properties": {
+          "attempt": {"type": "integer", "minimum": 1},
+          "result": {"enum": ["PASSED", "FIX_REQUIRED", "BLOCKED", "FAILED"]},
+          "evidence_path": {"type": "string"}, "fix_summary": {"type": "string"}
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["severity", "summary", "disposition", "evidence_path"],
+        "properties": {
+          "severity": {"enum": ["P0", "P1", "P2", "P3"]}, "summary": {"type": "string"},
+          "disposition": {"enum": ["RESOLVED", "OPEN", "RECLASSIFIED_BY_HUMAN"]},
+          "owner": {"type": "string"}, "target": {"type": "string"}, "evidence_path": {"type": "string"}
+        }
+      }
+    },
+    "blockers": {"type": "array", "items": {"type": "string"}},
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["path", "purpose"],
+        "properties": {"path": {"type": "string"}, "purpose": {"type": "string"}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}
+      }
+    },
+    "human_uat": {
+      "type": "object", "additionalProperties": false,
+      "required": ["required_ids", "status", "reviewer"],
+      "properties": {
+        "required_ids": {"type": "array", "items": {"type": "string", "pattern": "^P0[1-8]-UAT-[0-9]{2}$"}, "minItems": 1},
+        "status": {"enum": ["NOT_RUN", "PENDING", "BLOCKED"]},
+        "reviewer": {"const": "Nikola"}
+      }
+    },
+    "known_limitations": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["summary", "owner", "target"],
+        "properties": {"summary": {"type": "string"}, "owner": {"type": "string"}, "target": {"type": "string"}}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "READY_FOR_HUMAN_REVIEW"}}},
+      "then": {
+        "properties": {
+          "blockers": {"maxItems": 0},
+          "commands": {"minItems": 1, "items": {"properties": {"exit_code": {"const": 0}}}},
+          "tests": {"minItems": 1, "items": {"properties": {"result": {"const": "PASSED"}}}},
+          "review_attempts": {"minItems": 1, "contains": {"properties": {"result": {"const": "PASSED"}}, "required": ["result"]}, "minContains": 1},
+          "findings": {"items": {"if": {"properties": {"severity": {"enum": ["P0", "P1", "P2"]}}}, "then": {"properties": {"disposition": {"const": "RESOLVED"}}}}},
+          "human_uat": {"properties": {"status": {"const": "PENDING"}}}
+        }
+      }
+    }
+  ]
+}

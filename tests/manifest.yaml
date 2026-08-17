@@ -1,0 +1,1032 @@
+manifest_version: "1.0.0"
+determinism:
+  frozen_time: "2026-01-15T10:00:00Z"
+  network: "disabled except explicit local containers"
+  randomness: "seeded"
+  ids: "fixed UUID fixtures"
+  rule: "assert exact contract/durable state; security negatives assert zero protected side effects"
+
+tests:
+  - id: P01-001
+    phase: "01"
+    requirement_ids: [ARCH-001, ARCH-003]
+    level: integration
+    type: migration
+    command: "make db-migrate-check"
+    fixture: "backend/tests/fixtures/foundation/empty-postgres.yaml"
+    preconditions: ["empty local PostgreSQL", "fake environment"]
+    input: "upgrade to head twice and compare normalized catalog"
+    expected_result: "migration head is 0001_foundation and second upgrade has zero drift"
+    expected_state: "all required tables, indexes, constraints and grants exist once"
+    expected_side_effect: "schema objects only"
+    negative_assertion: ["no ad-hoc DDL", "no duplicate object", "no production connection"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-01/migration-check.log"
+
+  - id: P01-002
+    phase: "01"
+    requirement_ids: [ARCH-005]
+    level: integration
+    type: security
+    command: "pytest -q backend/tests/security/foundation/test_tenant_isolation.py::test_pool_context_and_guessed_id_fail_closed"
+    fixture: "backend/tests/fixtures/foundation/two-tenants.json"
+    preconditions: ["HD-001/002 accepted", "RLS/object guard configured"]
+    input: "query tenant A then tenant B on reused connection and guess A object as B"
+    expected_result: "B sees only B rows and guessed ID returns non-disclosing denial"
+    expected_state: "transaction-local context cleared after each transaction"
+    expected_side_effect: "security audit event only"
+    negative_assertion: ["no A row", "no A count/metadata", "no inherited actor context"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-01/security-tests.log"
+
+  - id: P01-003
+    phase: "01"
+    requirement_ids: [ARCH-004]
+    level: integration
+    type: failure-injection
+    command: "pytest -q backend/tests/integration/foundation/test_atomic_write.py::test_crash_before_commit_leaves_no_partial_state"
+    fixture: "backend/tests/fixtures/foundation/protected-mutation.json"
+    preconditions: ["failure point before transaction commit enabled"]
+    input: "execute fake protected mutation and inject crash"
+    expected_result: "controlled failure"
+    expected_state: "zero domain, event, outbox, idempotency-result and audit rows"
+    expected_side_effect: "none"
+    negative_assertion: ["no partial authoritative state", "no published event"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-01/automated-tests.log"
+
+  - id: P01-004
+    phase: "01"
+    requirement_ids: [ARCH-004]
+    level: integration
+    type: concurrency
+    command: "pytest -q backend/tests/integration/foundation/test_idempotency.py::test_ten_concurrent_duplicates_commit_once"
+    fixture: "backend/tests/fixtures/foundation/idempotent-write.json"
+    preconditions: ["fixed idempotency key", "ten workers"]
+    input: "submit ten equivalent writes concurrently"
+    expected_result: "all callers receive the same operation/result identity"
+    expected_state: "one domain effect, event, outbox row, idempotency result and audit chain"
+    expected_side_effect: "exactly one committed mutation"
+    negative_assertion: ["no duplicate mutation", "no timestamp-only key"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-01/automated-tests.log"
+
+  - id: P01-005
+    phase: "01"
+    requirement_ids: [ARCH-014]
+    level: integration
+    type: security
+    command: "pytest -q backend/tests/security/foundation/test_redaction.py::test_secret_never_reaches_log_audit_or_error"
+    fixture: "backend/tests/fixtures/security/fake-secret.json"
+    preconditions: ["captured log/audit/error sinks"]
+    input: "send fake secret through invalid and valid paths"
+    expected_result: "safe stable errors and redacted evidence"
+    expected_state: "audit contains allowlisted metadata only"
+    expected_side_effect: "redacted audit record where applicable"
+    negative_assertion: ["no fake secret in logs", "no fake secret in audit", "no fake secret in evidence"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-01/security-tests.log"
+
+  - id: P01-006
+    phase: "01"
+    requirement_ids: [ARCH-005]
+    level: integration
+    type: database-security
+    command: "pytest -q backend/tests/security/foundation/test_db_roles.py::test_runtime_roles_are_least_privilege"
+    fixture: "backend/tests/fixtures/foundation/db-roles.yaml"
+    preconditions: ["migration applied"]
+    input: "inspect role attributes and attempt owner/BYPASSRLS/out-of-scope table access"
+    expected_result: "all elevated/out-of-scope operations denied"
+    expected_state: "runtime roles have only documented grants"
+    expected_side_effect: "none"
+    negative_assertion: ["no SUPERUSER", "no BYPASSRLS", "no table ownership", "no migration privilege"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-01/security-tests.log"
+
+  - id: P01-007
+    phase: "01"
+    requirement_ids: [ARCH-013]
+    level: contract
+    type: versioning
+    command: "pytest -q backend/tests/contract/foundation/test_contract_versions.py"
+    fixture: "backend/tests/fixtures/contracts/foundation-v1.json"
+    preconditions: ["Foundation v1 schemas loaded"]
+    input: "round-trip v1 fixtures and load unknown major v2"
+    expected_result: "v1 round-trips exactly; v2 returns CONTRACT_VERSION_UNSUPPORTED"
+    expected_state: "no persisted coercion"
+    expected_side_effect: "none"
+    negative_assertion: ["no silent field loss", "no unknown-major acceptance"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-01/contract-tests.log"
+
+  - id: P01-008
+    phase: "01"
+    requirement_ids: [ARCH-016]
+    level: contract
+    type: execution-control
+    command: "pytest -q backend/tests/contract/execution/test_phase_result_schema.py"
+    fixture: "backend/tests/fixtures/execution/phase-results.json"
+    preconditions: ["schemas/phase-result.schema.json available"]
+    input: "validate ready result and otherwise-identical result with status PASS"
+    expected_result: "ready validates and PASS is rejected"
+    expected_state: "human UAT remains PENDING"
+    expected_side_effect: "none"
+    negative_assertion: ["no agent PASS", "no completed human UAT in agent schema"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-01/phase-review.log"
+
+  - id: P02-001
+    phase: "02"
+    requirement_ids: [ARCH-013]
+    level: contract
+    type: state-versioning
+    command: "pytest -q backend/tests/contract/agent/test_agent_state.py::test_v1_roundtrip_and_unknown_major_rejection"
+    fixture: "backend/tests/fixtures/agent/agent-state-v1.json"
+    preconditions: ["AgentState v1 serializer"]
+    input: "round-trip v1 then load v2"
+    expected_result: "exact v1 state and STATE_VERSION_UNSUPPORTED for v2"
+    expected_state: "original checkpoint preserved"
+    expected_side_effect: "none"
+    negative_assertion: ["no silent state migration", "no field loss"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-02/contract-tests.log"
+
+  - id: P02-002
+    phase: "02"
+    requirement_ids: [ARCH-013]
+    level: unit
+    type: routing
+    command: "pytest -q backend/tests/unit/agent/test_routes.py::test_fixed_intents_follow_documented_nodes"
+    fixture: "backend/tests/fixtures/agent/routing-cases.yaml"
+    preconditions: ["fixed model port"]
+    input: "run each fixed request through graph"
+    expected_result: "exact documented node and route sequence"
+    expected_state: "terminal state matches fixture"
+    expected_side_effect: "none"
+    negative_assertion: ["no model-selected authorization", "no business tool call"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-02/automated-tests.log"
+
+  - id: P02-003
+    phase: "02"
+    requirement_ids: [ARCH-001]
+    level: integration
+    type: checkpoint
+    command: "pytest -q backend/tests/integration/agent/test_checkpoint.py::test_checkpoint_restores_exact_state_sequence"
+    fixture: "backend/tests/fixtures/agent/checkpoint-run.json"
+    preconditions: ["local PostgreSQL checkpointer"]
+    input: "persist after node two, restart adapter and load"
+    expected_result: "exact AgentState and checkpoint sequence restored"
+    expected_state: "one tenant/actor-scoped operation"
+    expected_side_effect: "checkpoint rows only"
+    negative_assertion: ["no business row", "no cross-thread state"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-02/phase-review.log"
+
+  - id: P02-004
+    phase: "02"
+    requirement_ids: [ARCH-001, ARCH-013]
+    level: integration
+    type: crash-recovery
+    command: "pytest -q backend/tests/integration/agent/test_recovery.py::test_crash_after_checkpoint_resumes_once"
+    fixture: "backend/tests/fixtures/agent/crash-after-checkpoint.json"
+    preconditions: ["failure injection enabled"]
+    input: "crash before response then retry same client request"
+    expected_result: "same operation resumes and completes once"
+    expected_state: "one terminal operation and terminal event"
+    expected_side_effect: "checkpoint and stream records only"
+    negative_assertion: ["no duplicate operation", "no duplicate terminal event"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-02/phase-review.log"
+
+  - id: P02-005
+    phase: "02"
+    requirement_ids: [ARCH-013]
+    level: contract
+    type: streaming
+    command: "pytest -q backend/tests/contract/agent/test_sse.py::test_sequence_and_reconnect_are_exact"
+    fixture: "backend/tests/fixtures/agent/sse-three-deltas.json"
+    preconditions: ["fixed event clock and IDs"]
+    input: "stream, disconnect after sequence two, reconnect with last-event-id"
+    expected_result: "exact ordered remaining events and one terminal"
+    expected_state: "monotonic sequence retained"
+    expected_side_effect: "none"
+    negative_assertion: ["no replayed earlier delta", "no new operation"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-02/contract-tests.log"
+
+  - id: P02-006
+    phase: "02"
+    requirement_ids: [ARCH-005]
+    level: integration
+    type: security
+    command: "pytest -q backend/tests/security/agent/test_thread_isolation.py::test_guessed_operation_is_non_disclosing"
+    fixture: "backend/tests/fixtures/agent/two-actors-two-tenants.json"
+    preconditions: ["operations for tenant A and B"]
+    input: "B requests A operation/checkpoint/stream IDs"
+    expected_result: "same non-disclosing not-found response"
+    expected_state: "A state unchanged"
+    expected_side_effect: "safe security telemetry"
+    negative_assertion: ["no checkpoint", "no event", "no existence metadata"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-02/security-tests.log"
+
+  - id: P02-007
+    phase: "02"
+    requirement_ids: [ARCH-014]
+    level: integration
+    type: security
+    command: "pytest -q backend/tests/security/agent/test_trace_redaction.py::test_secret_is_protected_in_checkpoint_trace_and_log"
+    fixture: "backend/tests/fixtures/security/agent-secret-message.json"
+    preconditions: ["captured checkpointer/trace/log sinks"]
+    input: "process message containing fake secret"
+    expected_result: "authorized checkpoint adapter restores state; sinks are redacted"
+    expected_state: "checkpoint protected according to packet"
+    expected_side_effect: "redacted trace only"
+    negative_assertion: ["no plaintext secret in DB", "no secret in trace/log/evidence"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-02/security-tests.log"
+
+  - id: P02-008
+    phase: "02"
+    requirement_ids: [ARCH-008, ARCH-010]
+    level: integration
+    type: security
+    command: "pytest -q backend/tests/security/agent/test_no_tools.py::test_prompt_cannot_expose_or_call_business_tool"
+    fixture: "backend/tests/fixtures/agent/malicious-tool-request.json"
+    preconditions: ["Phase-02 no-tools registry"]
+    input: "message claims system authority and requests send_email"
+    expected_result: "controlled response and no tool exists"
+    expected_state: "operation completes/fails per fixed route"
+    expected_side_effect: "none"
+    negative_assertion: ["no tool call", "no email/business mutation"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-02/security-tests.log"
+
+  - id: P03-001
+    phase: "03"
+    requirement_ids: [ARCH-006]
+    level: unit
+    type: policy
+    command: "pytest -q backend/tests/unit/policy/test_catalogue.py::test_r1_fixture_is_allowed_exactly"
+    fixture: "backend/tests/fixtures/policy/r1-read.yaml"
+    preconditions: ["HD-003 accepted"]
+    input: "evaluate authorized R1 action"
+    expected_result: "PolicyDecision v1 ALLOW with exact risk/reason/version"
+    expected_state: "no approval created"
+    expected_side_effect: "none"
+    negative_assertion: ["no model classification", "no mutation"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-03/automated-tests.log"
+
+  - id: P03-002
+    phase: "03"
+    requirement_ids: [ARCH-005, ARCH-006]
+    level: integration
+    type: security
+    command: "pytest -q backend/tests/security/policy/test_authorization_first.py::test_approval_cannot_grant_missing_permission"
+    fixture: "backend/tests/fixtures/approvals/valid-grant-unauthorized-actor.json"
+    preconditions: ["valid-looking grant", "actor lacks permission"]
+    input: "evaluate/execute fake protected action"
+    expected_result: "AUTHORIZATION_DENIED"
+    expected_state: "approval unconsumed and counter zero"
+    expected_side_effect: "denial audit only"
+    negative_assertion: ["no counter increment", "no permission elevation"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-03/security-tests.log"
+
+  - id: P03-003
+    phase: "03"
+    requirement_ids: [ARCH-006]
+    level: integration
+    type: approval-gate
+    command: "pytest -q backend/tests/integration/approvals/test_gate.py::test_r2_before_approval_has_zero_effect"
+    fixture: "backend/tests/fixtures/approvals/r2-write.json"
+    preconditions: ["authorized requester"]
+    input: "execute before decision"
+    expected_result: "APPROVAL_REQUIRED and durable pending request"
+    expected_state: "fake effect counter zero"
+    expected_side_effect: "approval request and audit only"
+    negative_assertion: ["no protected execution", "no consumption"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-03/phase-review.log"
+
+  - id: P03-004
+    phase: "03"
+    requirement_ids: [ARCH-006]
+    level: integration
+    type: approval-execution
+    command: "pytest -q backend/tests/integration/approvals/test_gate.py::test_exact_approved_payload_executes_once"
+    fixture: "backend/tests/fixtures/approvals/r2-approved-exact.json"
+    preconditions: ["authorized requester/approver", "unexpired exact grant"]
+    input: "execute exact action"
+    expected_result: "SUCCEEDED with durable result"
+    expected_state: "approval CONSUMED and counter one"
+    expected_side_effect: "exactly one fake protected effect"
+    negative_assertion: ["no second consumption"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-03/phase-review.log"
+
+  - id: P03-005
+    phase: "03"
+    requirement_ids: [ARCH-007, ARCH-015]
+    level: integration
+    type: security
+    command: "pytest -q backend/tests/security/approvals/test_binding.py::test_material_edit_invalidates_grant"
+    fixture: "backend/tests/fixtures/approvals/approved-then-edited.json"
+    preconditions: ["payload v1 approved"]
+    input: "change target and amount then execute with v1 grant"
+    expected_result: "APPROVAL_STALE and request invalidated"
+    expected_state: "counter remains zero for edited action"
+    expected_side_effect: "invalidation audit only"
+    negative_assertion: ["no protected effect", "no old grant reuse"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-03/security-tests.log"
+
+  - id: P03-006
+    phase: "03"
+    requirement_ids: [ARCH-006, ARCH-015]
+    level: integration
+    type: concurrency
+    command: "pytest -q backend/tests/security/approvals/test_replay.py::test_concurrent_replay_consumes_once"
+    fixture: "backend/tests/fixtures/approvals/concurrent-replay.json"
+    preconditions: ["one current grant", "ten workers"]
+    input: "approve/consume same grant concurrently"
+    expected_result: "one success and durable no-op/conflict replays"
+    expected_state: "one decision, consumption and stored result"
+    expected_side_effect: "exactly one fake effect"
+    negative_assertion: ["no duplicate effect", "no double consumption"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-03/security-tests.log"
+
+  - id: P03-007
+    phase: "03"
+    requirement_ids: [ARCH-006]
+    level: integration
+    type: boundary
+    command: "pytest -q backend/tests/security/approvals/test_expiry_revocation.py"
+    fixture: "backend/tests/fixtures/approvals/expired-revoked-wrong-actor.yaml"
+    preconditions: ["server clock frozen"]
+    input: "execute expired, revoked and wrong-approver cases"
+    expected_result: "exact APPROVAL_EXPIRED/REVOKED/NOT_AUTHORIZED errors"
+    expected_state: "all effects zero and grants not consumed"
+    expected_side_effect: "safe audit only"
+    negative_assertion: ["no protected effect", "no object detail leak"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-03/security-tests.log"
+
+  - id: P03-008
+    phase: "03"
+    requirement_ids: [ARCH-014, ARCH-015]
+    level: integration
+    type: rate-limit-security
+    command: "pytest -q backend/tests/security/policy/test_rate_limit.py::test_fixed_burst_blocks_before_model_and_redacts"
+    fixture: "backend/tests/fixtures/policy/rate-burst-secret.json"
+    preconditions: ["HD-003 limit configured", "captured model/log sinks"]
+    input: "send fixed burst including fake secret"
+    expected_result: "RATE_LIMITED at exact boundary with retry-after"
+    expected_state: "counter/model calls stop at configured limit"
+    expected_side_effect: "rate/audit metadata only"
+    negative_assertion: ["no excess model call", "no secret in logs"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-03/security-tests.log"
+
+  - id: P04-001
+    phase: "04"
+    requirement_ids: [ARCH-008, ARCH-013]
+    level: contract
+    type: tool-catalogue
+    command: "pytest -q backend/tests/contract/mcp/test_tool_catalogue.py::test_exact_closed_v1_catalogue"
+    fixture: "backend/tests/fixtures/mcp/tool-catalogue-v1.yaml"
+    preconditions: ["MCP server initialized"]
+    input: "enumerate names, schemas, risk, permission, idempotency and audit metadata"
+    expected_result: "exact approved v1 catalogue with closed schemas"
+    expected_state: "catalogue hash matches fixture"
+    expected_side_effect: "none"
+    negative_assertion: ["no generic SQL/shell/HTTP/Cypher/file/admin tool", "no undeclared tool"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-04/contract-tests.log"
+
+  - id: P04-002
+    phase: "04"
+    requirement_ids: [ARCH-008]
+    level: integration
+    type: security
+    command: "pytest -q backend/tests/security/mcp/test_gateway.py::test_unknown_generic_and_forged_audience_fail"
+    fixture: "backend/tests/fixtures/mcp/forged-calls.yaml"
+    preconditions: ["gateway initialized"]
+    input: "call execute_sql, unknown tool and valid tool with forged audience"
+    expected_result: "tool unavailable or TOOL_NOT_ALLOWED"
+    expected_state: "business tables unchanged"
+    expected_side_effect: "safe security telemetry only"
+    negative_assertion: ["no schema/secret disclosure", "no mutation"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-04/security-tests.log"
+
+  - id: P04-003
+    phase: "04"
+    requirement_ids: [ARCH-005, ARCH-006]
+    level: integration
+    type: security
+    command: "pytest -q backend/tests/security/business/test_denials.py::test_tenant_and_policy_denials_have_zero_effect"
+    fixture: "backend/tests/fixtures/business/denied-client-write.yaml"
+    preconditions: ["tenant A/B", "policy deny fixture"]
+    input: "cross-tenant ID and policy-denied client write"
+    expected_result: "non-disclosing denial before mutation"
+    expected_state: "zero client/event/outbox/idempotency-success rows"
+    expected_side_effect: "denial audit only"
+    negative_assertion: ["no business mutation", "no cross-tenant metadata"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-04/security-tests.log"
+
+  - id: P04-004
+    phase: "04"
+    requirement_ids: [ARCH-004]
+    level: integration
+    type: concurrency
+    command: "pytest -q backend/tests/integration/business/test_client_tools.py::test_duplicate_client_create_commits_once"
+    fixture: "backend/tests/fixtures/business/client-create.json"
+    preconditions: ["authorized exact request", "ten workers"]
+    input: "call client_create ten times with same key"
+    expected_result: "all return same client/result identity"
+    expected_state: "one client/event/outbox/audit/idempotency result"
+    expected_side_effect: "exactly one client created"
+    negative_assertion: ["no duplicate client", "no partial atomic record"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-04/phase-review.log"
+
+  - id: P04-005
+    phase: "04"
+    requirement_ids: [HD-004, ARCH-013]
+    level: unit
+    type: business-calculation
+    command: "pytest -q backend/tests/unit/business/test_offer_rules.py::test_approved_fixed_offer_fixture"
+    fixture: "backend/tests/fixtures/business/offer-approved-rules.json"
+    preconditions: ["HD-004 accepted"]
+    input: "validate fixed line items/currency/tax fixture"
+    expected_result: "exact HD-004 totals, rounding and DRAFT-to-VALIDATED result"
+    expected_state: "validated content hash/version exact"
+    expected_side_effect: "none"
+    negative_assertion: ["no binary float", "no model-supplied total authority"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-04/automated-tests.log"
+
+  - id: P04-006
+    phase: "04"
+    requirement_ids: [HD-004, ARCH-007]
+    level: integration
+    type: security
+    command: "pytest -q backend/tests/security/business/test_invoice_binding.py::test_edit_invalidates_validated_invoice_approval"
+    fixture: "backend/tests/fixtures/business/invoice-approved-then-edited.json"
+    preconditions: ["invoice v1 validated/approved"]
+    input: "change line quantity and issue with old approval"
+    expected_result: "new DRAFT version/hash and APPROVAL_STALE"
+    expected_state: "no invoice number/issue event"
+    expected_side_effect: "none"
+    negative_assertion: ["no issue", "no old approval consumption"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-04/security-tests.log"
+
+  - id: P04-007
+    phase: "04"
+    requirement_ids: [HD-004, ARCH-004]
+    level: integration
+    type: concurrency
+    command: "pytest -q backend/tests/integration/business/test_invoice_issue.py::test_concurrent_issue_numbers_are_backend_unique"
+    fixture: "backend/tests/fixtures/business/two-approved-invoices.json"
+    preconditions: ["HD-004 accepted", "two distinct approved documents"]
+    input: "issue concurrently"
+    expected_result: "two exact unique backend-assigned numbers"
+    expected_state: "each invoice issued once with atomic audit/event"
+    expected_side_effect: "two distinct issues"
+    negative_assertion: ["no duplicate number", "no model-chosen number"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-04/phase-review.log"
+
+  - id: P04-008
+    phase: "04"
+    requirement_ids: [ARCH-004, ARCH-015]
+    level: integration
+    type: failure-recovery
+    command: "pytest -q backend/tests/integration/business/test_unknown_result.py::test_crash_after_commit_returns_prior_result_without_duplicate"
+    fixture: "backend/tests/fixtures/business/payment-crash-after-commit.json"
+    preconditions: ["failure injection after commit"]
+    input: "record payment, lose response, retry same request"
+    expected_result: "durable first result returned"
+    expected_state: "one payment and complete event/outbox/audit"
+    expected_side_effect: "exactly one payment record"
+    negative_assertion: ["no duplicate payment", "no blind second mutation"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-04/phase-review.log"
+
+  - id: P05-001
+    phase: "05"
+    requirement_ids: [ARCH-009]
+    level: unit
+    type: resolution
+    command: "pytest -q backend/tests/unit/email/test_resolution.py::test_exact_account_and_contact_resolution"
+    fixture: "backend/tests/fixtures/email/one-account-one-contact.json"
+    preconditions: ["HD-005 accepted fake registry"]
+    input: "resolve authorized sender alias and known client contact"
+    expected_result: "exact canonical account/contact IDs and verified addresses"
+    expected_state: "no draft/send created"
+    expected_side_effect: "none"
+    negative_assertion: ["no guessed address", "no similarity-only selection"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-05/automated-tests.log"
+
+  - id: P05-002
+    phase: "05"
+    requirement_ids: [ARCH-005, ARCH-009]
+    level: integration
+    type: security
+    command: "pytest -q backend/tests/security/email/test_resolution_denials.py"
+    fixture: "backend/tests/fixtures/email/unknown-ambiguous-cross-tenant.yaml"
+    preconditions: ["captured provider double"]
+    input: "resolve unknown, ambiguous and cross-tenant account/contact"
+    expected_result: "safe clarification/denial"
+    expected_state: "zero approved/sending messages"
+    expected_side_effect: "zero provider calls"
+    negative_assertion: ["no guessed recipient", "no cross-tenant account metadata"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-05/security-tests.log"
+
+  - id: P05-003
+    phase: "05"
+    requirement_ids: [ARCH-009]
+    level: integration
+    type: draft
+    command: "pytest -q backend/tests/integration/email/test_draft.py::test_draft_is_durable_before_approval_or_send"
+    fixture: "backend/tests/fixtures/email/draft-v1.json"
+    preconditions: ["authorized resolved targets"]
+    input: "create draft"
+    expected_result: "DRAFT v1 with exact stable hash"
+    expected_state: "durable draft and no message row"
+    expected_side_effect: "zero provider calls"
+    negative_assertion: ["no automatic approval", "no send"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-05/phase-review.log"
+
+  - id: P05-004
+    phase: "05"
+    requirement_ids: [ARCH-006, ARCH-009]
+    level: integration
+    type: approved-send
+    command: "pytest -q backend/tests/integration/email/test_send.py::test_exact_current_approval_sends_once"
+    fixture: "backend/tests/fixtures/email/approved-draft-v1.json"
+    preconditions: ["current authorized approval"]
+    input: "send exact current draft"
+    expected_result: "one ACCEPTED ProviderSendResult"
+    expected_state: "draft SENT, approval consumed, message/audit/event durable"
+    expected_side_effect: "exactly one provider message"
+    negative_assertion: ["no second send", "no unapproved target"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-05/phase-review.log"
+
+  - id: P05-005
+    phase: "05"
+    requirement_ids: [ARCH-007, ARCH-009]
+    level: integration
+    type: security
+    command: "pytest -q backend/tests/security/email/test_edit_invalidation.py"
+    fixture: "backend/tests/fixtures/email/approved-edits.yaml"
+    preconditions: ["draft v1 approved"]
+    input: "separately alter sender, recipient, body and attachment then send with v1 approval"
+    expected_result: "APPROVAL_STALE for every material edit"
+    expected_state: "new draft version and old approval invalidated"
+    expected_side_effect: "zero provider messages"
+    negative_assertion: ["no stale grant use", "no altered-target send"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-05/security-tests.log"
+
+  - id: P05-006
+    phase: "05"
+    requirement_ids: [ARCH-004, ARCH-009]
+    level: integration
+    type: concurrency
+    command: "pytest -q backend/tests/integration/email/test_idempotency.py::test_ten_concurrent_sends_create_one_message"
+    fixture: "backend/tests/fixtures/email/approved-send-duplicate.json"
+    preconditions: ["approved current draft", "ten workers"]
+    input: "submit same send ten times"
+    expected_result: "same durable provider/message result returned"
+    expected_state: "one message and one approval consumption"
+    expected_side_effect: "exactly one provider message"
+    negative_assertion: ["no duplicate message", "no second consumption"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-05/phase-review.log"
+
+  - id: P05-007
+    phase: "05"
+    requirement_ids: [ARCH-009]
+    level: integration
+    type: unknown-result
+    command: "pytest -q backend/tests/integration/email/test_unknown_result.py::test_accept_then_timeout_verifies_without_resend"
+    fixture: "backend/tests/fixtures/email/provider-accept-timeout.json"
+    preconditions: ["provider double supports exact verification"]
+    input: "provider accepts then times out; recovery runs"
+    expected_result: "verification returns VERIFIED_SENT"
+    expected_state: "one SENT message with verification evidence"
+    expected_side_effect: "exactly one provider message"
+    negative_assertion: ["no blind retry", "no duplicate thread"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-05/phase-review.log"
+
+  - id: P05-008
+    phase: "05"
+    requirement_ids: [ARCH-010, ARCH-014]
+    level: integration
+    type: security
+    command: "pytest -q backend/tests/security/email/test_injection.py::test_incoming_content_has_zero_authority_and_is_redacted"
+    fixture: "backend/tests/fixtures/email/injection-secret.eml"
+    preconditions: ["captured policy/tool/provider/log sinks"]
+    input: "use malicious email as context"
+    expected_result: "content remains untrusted evidence"
+    expected_state: "policy/approval/tool state unchanged"
+    expected_side_effect: "zero provider/tool calls"
+    negative_assertion: ["no send", "no approval", "no secret in logs/evidence"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-05/security-tests.log"
+
+  - id: P06-001
+    phase: "06"
+    requirement_ids: [ARCH-013]
+    level: unit
+    type: chunking
+    command: "pytest -q backend/tests/unit/documents/test_chunker.py::test_golden_document_is_byte_stable"
+    fixture: "backend/tests/fixtures/documents/golden-heading-table.json"
+    preconditions: ["fixed parser/chunker versions"]
+    input: "chunk same document twice"
+    expected_result: "byte-identical text, IDs, hashes, locators and order"
+    expected_state: "no persistent duplicate"
+    expected_side_effect: "none"
+    negative_assertion: ["no random ID", "no unstable boundary"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-06/automated-tests.log"
+
+  - id: P06-002
+    phase: "06"
+    requirement_ids: [HD-006, ARCH-013]
+    level: contract
+    type: collection-version
+    command: "pytest -q backend/tests/contract/retrieval/test_collection_schema.py"
+    fixture: "backend/tests/fixtures/retrieval/collection-v1.yaml"
+    preconditions: ["HD-006 accepted or deterministic test schema"]
+    input: "provision v1 then upsert incompatible dimension/model ID"
+    expected_result: "v1 exact schema; mismatch rejected before write"
+    expected_state: "collection contains no incompatible point"
+    expected_side_effect: "compatible test collection only"
+    negative_assertion: ["no mixed model", "no partial incompatible upsert"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-06/contract-tests.log"
+
+  - id: P06-003
+    phase: "06"
+    requirement_ids: [ARCH-005, ARCH-011]
+    level: integration
+    type: security
+    command: "pytest -q backend/tests/security/retrieval/test_acl.py::test_cross_tenant_acl_evidence_is_absent_everywhere"
+    fixture: "backend/tests/fixtures/retrieval/two-tenants-rare-phrase.json"
+    preconditions: ["projected fixed corpus"]
+    input: "tenant B queries phrase present in A and B"
+    expected_result: "only B evidence returned"
+    expected_state: "candidate/hit counts reveal no A point"
+    expected_side_effect: "none"
+    negative_assertion: ["no A snippet", "no A metadata", "no A score/count"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-06/security-tests.log"
+
+  - id: P06-004
+    phase: "06"
+    requirement_ids: [ARCH-011, HD-006]
+    level: integration
+    type: retrieval-quality
+    command: "pytest -q backend/tests/integration/retrieval/test_hybrid.py::test_golden_semantic_and_exact_ranking"
+    fixture: "backend/tests/fixtures/retrieval/hybrid-golden.json"
+    preconditions: ["fixed embeddings/sparse scores/fusion"]
+    input: "run semantic paraphrase and exact offer-number queries"
+    expected_result: "exact ordered evidence IDs meet accepted threshold"
+    expected_state: "no corpus mutation"
+    expected_side_effect: "none"
+    negative_assertion: ["no fabricated hit", "no threshold waiver"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-06/phase-review.log"
+
+  - id: P06-005
+    phase: "06"
+    requirement_ids: [ARCH-010, ARCH-015]
+    level: integration
+    type: security
+    command: "pytest -q backend/tests/security/retrieval/test_injection.py::test_poisoned_document_cannot_change_control_or_call_tool"
+    fixture: "backend/tests/fixtures/injection/poisoned-financial-action.txt"
+    preconditions: ["captured tool/policy/identity sinks"]
+    input: "ingest, retrieve and synthesize poisoned text"
+    expected_result: "EvidenceItem trust UNTRUSTED and safe answer/abstention"
+    expected_state: "identity/policy/approval/tool registry unchanged"
+    expected_side_effect: "zero tool/business/email calls"
+    negative_assertion: ["no instruction execution", "no data exfiltration"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-06/security-tests.log"
+
+  - id: P06-006
+    phase: "06"
+    requirement_ids: [ARCH-002, ARCH-013]
+    level: integration
+    type: idempotency
+    command: "pytest -q backend/tests/integration/retrieval/test_ingest_idempotency.py::test_duplicate_source_events_converge"
+    fixture: "backend/tests/fixtures/documents/duplicate-ingest-events.json"
+    preconditions: ["same content via two deliveries"]
+    input: "consume both events concurrently"
+    expected_result: "same durable ingest/projection result"
+    expected_state: "one document version, chunk set and active point set"
+    expected_side_effect: "one logical projection"
+    negative_assertion: ["no duplicate chunk", "no duplicate point"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-06/phase-review.log"
+
+  - id: P06-007
+    phase: "06"
+    requirement_ids: [ARCH-011]
+    level: integration
+    type: degradation
+    command: "pytest -q backend/tests/integration/retrieval/test_degradation.py::test_qdrant_outage_abstains_without_unfiltered_fallback"
+    fixture: "backend/tests/fixtures/retrieval/qdrant-unavailable.json"
+    preconditions: ["Qdrant forced unavailable"]
+    input: "run evidence query"
+    expected_result: "RETRIEVAL_UNAVAILABLE or EVIDENCE_INSUFFICIENT with degraded flag"
+    expected_state: "authoritative metadata unchanged"
+    expected_side_effect: "none"
+    negative_assertion: ["no fabricated evidence", "no unrestricted fallback"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-06/phase-review.log"
+
+  - id: P06-008
+    phase: "06"
+    requirement_ids: [ARCH-001, ARCH-002]
+    level: integration
+    type: rebuild
+    command: "pytest -q backend/tests/integration/retrieval/test_rebuild.py::test_empty_collection_rebuild_matches_baseline"
+    fixture: "backend/tests/fixtures/retrieval/rebuild-baseline.json"
+    preconditions: ["authoritative Postgres corpus", "empty Qdrant collection"]
+    input: "run full rebuild and golden queries"
+    expected_result: "IDs, counts, payload indexes, rankings and ACL results match hashes"
+    expected_state: "new verified active collection"
+    expected_side_effect: "rebuildable projection only"
+    negative_assertion: ["no authoritative source mutation", "no hidden manual fix"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-06/rebuild.log"
+
+  - id: P07-001
+    phase: "07"
+    requirement_ids: [ARCH-001, ARCH-002]
+    level: integration
+    type: rebuild
+    command: "pytest -q backend/tests/integration/graph/test_rebuild.py::test_deleted_graph_rebuilds_exactly"
+    fixture: "backend/tests/fixtures/graph/postgres-ledger-baseline.json"
+    preconditions: ["empty Neo4j projection"]
+    input: "project fixed ledger and run typed golden queries"
+    expected_result: "exact node/edge IDs, counts, metadata and query outputs"
+    expected_state: "verified projection cursor at source head"
+    expected_side_effect: "Neo4j projection only"
+    negative_assertion: ["no Postgres mutation", "no hidden manual edge"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-07/rebuild.log"
+
+  - id: P07-002
+    phase: "07"
+    requirement_ids: [ARCH-002]
+    level: integration
+    type: idempotency
+    command: "pytest -q backend/tests/integration/graph/test_projector.py::test_redelivery_and_update_do_not_duplicate"
+    fixture: "backend/tests/fixtures/graph/duplicate-and-update-events.json"
+    preconditions: ["projector v1"]
+    input: "deliver create five times then one update twice"
+    expected_result: "stable identities and current exact source version"
+    expected_state: "one node/edge with complete evidence/version history"
+    expected_side_effect: "one logical projection/update"
+    negative_assertion: ["no duplicate node", "no duplicate edge"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-07/phase-review.log"
+
+  - id: P07-003
+    phase: "07"
+    requirement_ids: [ARCH-005]
+    level: integration
+    type: security
+    command: "pytest -q backend/tests/security/graph/test_tenant_paths.py::test_cross_tenant_path_and_count_are_non_disclosing"
+    fixture: "backend/tests/fixtures/graph/two-tenant-overlap.json"
+    preconditions: ["identical canonical ID text across tenants"]
+    input: "tenant A requests path/count involving B"
+    expected_result: "not found/empty authorized result"
+    expected_state: "graph unchanged"
+    expected_side_effect: "safe denial telemetry"
+    negative_assertion: ["no B path", "no B count/metadata"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-07/security-tests.log"
+
+  - id: P07-004
+    phase: "07"
+    requirement_ids: [ARCH-008]
+    level: contract
+    type: tool-security
+    command: "pytest -q backend/tests/contract/graph/test_tool_registry.py::test_only_typed_read_tools_exist"
+    fixture: "backend/tests/fixtures/graph/tool-registry-v1.yaml"
+    preconditions: ["graph MCP/tool registry"]
+    input: "enumerate tools and call write_cypher_any"
+    expected_result: "exact typed read allowlist; arbitrary Cypher unavailable"
+    expected_state: "graph unchanged"
+    expected_side_effect: "none"
+    negative_assertion: ["no write tool", "no raw Cypher argument"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-07/contract-tests.log"
+
+  - id: P07-005
+    phase: "07"
+    requirement_ids: [ARCH-011]
+    level: unit
+    type: routing
+    command: "pytest -q backend/tests/unit/graphrag/test_router.py::test_minimum_sufficient_routes_and_budgets"
+    fixture: "backend/tests/fixtures/graphrag/routing-cases.yaml"
+    preconditions: ["router rules v1"]
+    input: "route structured, semantic, relationship, combined and unsupported queries"
+    expected_result: "exact POSTGRES/QDRANT/NEO4J/FUSED/ABSTAIN routes and budgets"
+    expected_state: "no store called during pure route test"
+    expected_side_effect: "none"
+    negative_assertion: ["no query-all-stores default", "no model-only route"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-07/automated-tests.log"
+
+  - id: P07-006
+    phase: "07"
+    requirement_ids: [ARCH-011]
+    level: integration
+    type: evidence-fusion
+    command: "pytest -q backend/tests/integration/graphrag/test_fusion.py::test_golden_claims_have_exact_citations"
+    fixture: "backend/tests/fixtures/graphrag/fused-golden.json"
+    preconditions: ["fixed Postgres/Qdrant/Neo4j evidence"]
+    input: "run combined project-delay query"
+    expected_result: "exact deduped claims, order, dates, citations and route metadata"
+    expected_state: "no source mutation"
+    expected_side_effect: "none"
+    negative_assertion: ["no source-free claim", "no fabricated URL/date/ID"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-07/phase-review.log"
+
+  - id: P07-007
+    phase: "07"
+    requirement_ids: [ARCH-010, ARCH-011]
+    level: integration
+    type: security
+    command: "pytest -q backend/tests/security/graphrag/test_untrusted_revoked.py"
+    fixture: "backend/tests/fixtures/graphrag/poisoned-edge-revoked-source.json"
+    preconditions: ["captured policy/tool sinks"]
+    input: "fuse poisoned graph property and revoked Qdrant source"
+    expected_result: "revoked evidence excluded and poison remains untrusted"
+    expected_state: "identity/policy/tools/graph unchanged"
+    expected_side_effect: "zero tool calls"
+    negative_assertion: ["no revoked citation", "no injected control", "no data leak"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-07/security-tests.log"
+
+  - id: P07-008
+    phase: "07"
+    requirement_ids: [ARCH-011]
+    level: integration
+    type: degradation-abstention
+    command: "pytest -q backend/tests/integration/graphrag/test_degradation.py"
+    fixture: "backend/tests/fixtures/graphrag/outage-contradiction-missing.yaml"
+    preconditions: ["fixed source failures/evidence"]
+    input: "run Neo4j outage, equal contradiction and missing amount cases"
+    expected_result: "labelled degraded answer, contradiction, and exact abstention respectively"
+    expected_state: "no source mutation"
+    expected_side_effect: "none"
+    negative_assertion: ["no graph causality during outage", "no chosen contradictory value", "no invented amount"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-07/phase-review.log"
+
+  - id: P08-001
+    phase: "08"
+    requirement_ids: [ARCH-012]
+    level: unit
+    type: fact-extraction
+    command: "pytest -q backend/tests/unit/memory/test_extraction.py::test_fixed_source_produces_exact_fact_proposals"
+    fixture: "backend/tests/fixtures/memory/golden-source-event.json"
+    preconditions: ["HD-008 accepted", "fixed extractor output"]
+    input: "extract facts twice"
+    expected_result: "exact typed fact IDs/values/confidence/evidence once"
+    expected_state: "PROPOSED or ACTIVE per accepted threshold"
+    expected_side_effect: "fact proposals only"
+    negative_assertion: ["no unsupported fact", "no permission fact activation"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-08/automated-tests.log"
+
+  - id: P08-002
+    phase: "08"
+    requirement_ids: [ARCH-012]
+    level: integration
+    type: idempotency
+    command: "pytest -q backend/tests/integration/memory/test_idempotency.py::test_five_redeliveries_change_memory_once"
+    fixture: "backend/tests/fixtures/memory/duplicate-source.json"
+    preconditions: ["curator v1"]
+    input: "deliver same source five times concurrently"
+    expected_result: "same curator result"
+    expected_state: "one fact set, snapshot change and projection proposal"
+    expected_side_effect: "one logical memory update"
+    negative_assertion: ["no duplicate fact", "no duplicate projection proposal"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-08/phase-review.log"
+
+  - id: P08-003
+    phase: "08"
+    requirement_ids: [ARCH-012]
+    level: integration
+    type: conflict
+    command: "pytest -q backend/tests/integration/memory/test_conflicts.py::test_equal_priority_conflict_remains_explicit"
+    fixture: "backend/tests/fixtures/memory/conflicting-due-dates.json"
+    preconditions: ["equal source priority"]
+    input: "curate and build snapshot"
+    expected_result: "FACT_CONFLICT_UNRESOLVED with both evidence refs"
+    expected_state: "facts CONTRADICTED and snapshot labels unresolved conflict"
+    expected_side_effect: "contradiction relation only"
+    negative_assertion: ["no silent winner", "no destructive overwrite"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-08/phase-review.log"
+
+  - id: P08-004
+    phase: "08"
+    requirement_ids: [ARCH-012]
+    level: integration
+    type: correction
+    command: "pytest -q backend/tests/integration/memory/test_correction.py::test_authorized_correction_preserves_lineage"
+    fixture: "backend/tests/fixtures/memory/authorized-correction.json"
+    preconditions: ["HD-008 correction authority actor"]
+    input: "correct/retract wrong automatic fact"
+    expected_result: "new current fact and exact SUPERSEDES/RETRACTS relation"
+    expected_state: "original retained; new snapshot version current"
+    expected_side_effect: "one authorized correction audit/projection proposal"
+    negative_assertion: ["no original deletion", "no history loss"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-08/phase-review.log"
+
+  - id: P08-005
+    phase: "08"
+    requirement_ids: [ARCH-010, ARCH-015]
+    level: integration
+    type: security
+    command: "pytest -q backend/tests/security/memory/test_poisoning.py::test_content_cannot_grant_admin_change_owner_or_approve"
+    fixture: "backend/tests/fixtures/memory/permission-poisoning.json"
+    preconditions: ["captured IAM/policy/tool sinks"]
+    input: "curate malicious document/email facts"
+    expected_result: "authority claims quarantined/rejected"
+    expected_state: "IAM/policy/approval/tool registry unchanged"
+    expected_side_effect: "zero protected actions"
+    negative_assertion: ["no role grant", "no owner change", "no approval/tool call"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-08/security-tests.log"
+
+  - id: P08-006
+    phase: "08"
+    requirement_ids: [ARCH-011, ARCH-012]
+    level: contract
+    type: snapshot-quality
+    command: "pytest -q backend/tests/contract/memory/test_snapshot.py::test_stale_low_confidence_snapshot_is_labelled_or_abstains"
+    fixture: "backend/tests/fixtures/memory/stale-low-confidence-snapshot.json"
+    preconditions: ["fixed as-of clock"]
+    input: "query consequential current state"
+    expected_result: "stale/uncertain label, evidence refs and refresh/abstention code"
+    expected_state: "low-confidence fact not activated"
+    expected_side_effect: "optional controlled refresh request only"
+    negative_assertion: ["no certain unsupported claim", "no low-confidence graph proposal"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-08/contract-tests.log"
+
+  - id: P08-007
+    phase: "08"
+    requirement_ids: [ARCH-005, ARCH-006, ARCH-007, ARCH-008, ARCH-009, ARCH-010, ARCH-014, ARCH-015]
+    level: acceptance
+    type: cumulative-security
+    command: "make test-security"
+    fixture: "backend/tests/fixtures/acceptance/security-matrix.yaml"
+    preconditions: ["all enabled phase services", "fake data/providers"]
+    input: "run tenant/ID guessing, approval edit/replay, email duplicate/unknown, generic tool and injection matrix"
+    expected_result: "all exact denials/recoveries pass"
+    expected_state: "authoritative state contains only intended accepted fixture effects"
+    expected_side_effect: "every negative case zero; positive cases exactly once"
+    negative_assertion: ["no waiver", "no cross-tenant leak", "no bypass", "no duplicate", "no secret"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-08/security-tests.log"
+
+  - id: P08-008
+    phase: "08"
+    requirement_ids: [ARCH-001, ARCH-002, ARCH-016]
+    level: acceptance
+    type: release-evidence
+    command: "make phase PHASE=08"
+    fixture: "backend/tests/fixtures/acceptance/release-candidate.json"
+    preconditions: ["frozen fake/staging candidate", "all prior results"]
+    input: "rebuild projections, validate result/evidence hashes, try agent PASS, then mutate candidate hash"
+    expected_result: "rebuilds match; valid agent result passes; PASS rejected; mutation invalidates acceptance"
+    expected_state: "human UAT PENDING and release candidate frozen or INVALIDATED"
+    expected_side_effect: "evidence artifacts only"
+    negative_assertion: ["no agent PASS/GO", "no stale evidence acceptance", "no authoritative loss"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-08/acceptance.log"

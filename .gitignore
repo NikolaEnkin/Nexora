@@ -13,3 +13,4 @@ build/
 coverage.xml
 htmlcov/
 artifacts/validation/**/secrets/
+PROJECT_GUIDE_BG.md

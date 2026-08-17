@@ -1,0 +1,5 @@
+{
+  "operation": "foundation.test_mutation",
+  "idempotency_key": "crash-key-001",
+  "fail_before_commit": true
+}

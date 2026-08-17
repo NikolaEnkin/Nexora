@@ -1,0 +1,3 @@
+database: nexora
+expected_head: 0001_foundation
+production_data: false

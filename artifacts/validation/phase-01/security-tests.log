@@ -1,0 +1,14 @@
+Phase 01 machine validation — 2026-08-17 — fake/local data only
+
+$ make test-security
+ Container nexora-foundation-redis-1 Running 
+ Container nexora-foundation-postgres-1 Running 
+ Container nexora-foundation-redis-1 Waiting 
+ Container nexora-foundation-postgres-1 Waiting 
+ Container nexora-foundation-postgres-1 Healthy 
+ Container nexora-foundation-redis-1 Healthy 
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+...........                                                              [100%]
+11 passed, 28 deselected in 1.35s
+[exit_code=0]

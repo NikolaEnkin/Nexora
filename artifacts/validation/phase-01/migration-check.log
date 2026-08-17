@@ -1,0 +1,25 @@
+Phase 01 machine validation — 2026-08-17 — fake/local data only
+
+$ make db-migrate-check
+ Container nexora-foundation-redis-1 Running 
+ Container nexora-foundation-postgres-1 Running 
+ Container nexora-foundation-redis-1 Waiting 
+ Container nexora-foundation-postgres-1 Waiting 
+ Container nexora-foundation-redis-1 Healthy 
+ Container nexora-foundation-postgres-1 Healthy 
+$ .venv/bin/alembic -c backend/alembic.ini upgrade head
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+$ .venv/bin/alembic -c backend/alembic.ini upgrade head
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+$ .venv/bin/alembic -c backend/alembic.ini downgrade base
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running downgrade 0001_foundation -> , Create Phase-01 authoritative foundation.
+$ .venv/bin/alembic -c backend/alembic.ini upgrade head
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_foundation, Create Phase-01 authoritative foundation.
+migration-check: 0001_foundation, no drift, RLS/grants verified
+[exit_code=0]

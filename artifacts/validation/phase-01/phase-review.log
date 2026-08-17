@@ -1,0 +1,195 @@
+Phase 01 machine validation — 2026-08-17 — fake/local data only
+
+$ git status --short
+ M .gitignore
+ M PHASE_STATUS.md
+ M backend/README.md
+ M infra/README.md
+?? .env.example
+?? .github/
+?? Makefile
+?? artifacts/validation/phase-01/REVIEW.md
+?? artifacts/validation/phase-01/automated-tests.log
+?? artifacts/validation/phase-01/changed-files.txt
+?? artifacts/validation/phase-01/code-attempts.md
+?? artifacts/validation/phase-01/contract-tests.log
+?? artifacts/validation/phase-01/human-uat.md
+?? artifacts/validation/phase-01/migration-check.log
+?? artifacts/validation/phase-01/phase-review.log
+?? artifacts/validation/phase-01/reviewer.md
+?? artifacts/validation/phase-01/security-review.md
+?? artifacts/validation/phase-01/security-tests.log
+?? artifacts/validation/phase-01/test-audit.md
+?? backend/alembic.ini
+?? backend/alembic/
+?? backend/app/
+?? backend/tests/
+?? docs/execplans/phase-01.md
+?? infra/compose.yaml
+?? infra/postgres/
+?? pyproject.toml
+?? scripts/
+[exit_code=0]
+
+$ git diff --check
+[exit_code=0]
+
+$ docker compose -f infra/compose.yaml config
+name: nexora-foundation
+services:
+  postgres:
+    environment:
+      POSTGRES_DB: nexora
+      POSTGRES_PASSWORD: local-postgres-only
+      POSTGRES_USER: postgres
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U postgres -d nexora
+      timeout: 3s
+      interval: 2s
+      retries: 20
+    image: postgres:16.15-alpine3.24@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 5432
+        published: "54329"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: nexora-postgres-data
+        target: /var/lib/postgresql/data
+        volume: {}
+      - type: bind
+        source: /Users/nikolaenkin/Desktop/Nexora/infra/postgres/init
+        target: /docker-entrypoint-initdb.d
+        read_only: true
+        bind: {}
+  redis:
+    command:
+      - redis-server
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - ping
+      timeout: 3s
+      interval: 2s
+      retries: 20
+    image: redis:7.4.10-alpine3.21@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 6379
+        published: "63799"
+        protocol: tcp
+    restart: unless-stopped
+networks:
+  default:
+    name: nexora-foundation_default
+volumes:
+  nexora-postgres-data:
+    name: nexora-foundation_nexora-postgres-data
+[exit_code=0]
+
+$ make bootstrap
+Obtaining file:///Users/nikolaenkin/Desktop/Nexora
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Checking if build backend supports build_editable: started
+  Checking if build backend supports build_editable: finished with status 'done'
+  Getting requirements to build editable: started
+  Getting requirements to build editable: finished with status 'done'
+  Preparing editable metadata (pyproject.toml): started
+  Preparing editable metadata (pyproject.toml): finished with status 'done'
+Requirement already satisfied: alembic==1.19.1 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (1.19.1)
+Requirement already satisfied: annotated-doc==0.0.5 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (0.0.5)
+Requirement already satisfied: annotated-types==0.8.0 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (0.8.0)
+Requirement already satisfied: anyio==4.14.2 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (4.14.2)
+Requirement already satisfied: click==8.4.2 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (8.4.2)
+Requirement already satisfied: fastapi==0.141.1 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (0.141.1)
+Requirement already satisfied: h11==0.16.0 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (0.16.0)
+Requirement already satisfied: idna==3.18 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (3.18)
+Requirement already satisfied: Mako==1.4.1 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (1.4.1)
+Requirement already satisfied: MarkupSafe==3.0.3 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (3.0.3)
+Requirement already satisfied: psycopg==3.3.4 in ./.venv/lib/python3.12/site-packages (from psycopg[binary]==3.3.4->nexora-business-ops==0.1.0) (3.3.4)
+Requirement already satisfied: pydantic==2.13.4 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (2.13.4)
+Requirement already satisfied: pydantic-core==2.46.4 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (2.46.4)
+Requirement already satisfied: pydantic-settings==2.15.0 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (2.15.0)
+Requirement already satisfied: python-dotenv==1.2.3 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (1.2.3)
+Requirement already satisfied: redis==8.1.0 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (8.1.0)
+Requirement already satisfied: sqlalchemy==2.0.52 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (2.0.52)
+Requirement already satisfied: starlette==1.6.0 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (1.6.0)
+Requirement already satisfied: structlog==26.1.0 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (26.1.0)
+Requirement already satisfied: typing-extensions==4.16.0 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (4.16.0)
+Requirement already satisfied: typing-inspection==0.4.4 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (0.4.4)
+Requirement already satisfied: uvicorn==0.52.3 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (0.52.3)
+Requirement already satisfied: psycopg-binary==3.3.4 in ./.venv/lib/python3.12/site-packages (from psycopg[binary]==3.3.4->nexora-business-ops==0.1.0) (3.3.4)
+Requirement already satisfied: ast-serialize==0.8.0 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (0.8.0)
+Requirement already satisfied: attrs==26.1.0 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (26.1.0)
+Requirement already satisfied: httpcore2==2.10.0 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (2.10.0)
+Requirement already satisfied: httpx2==2.10.0 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (2.10.0)
+Requirement already satisfied: iniconfig==2.3.0 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (2.3.0)
+Requirement already satisfied: jsonschema==4.26.0 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (4.26.0)
+Requirement already satisfied: jsonschema-specifications==2025.9.1 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (2025.9.1)
+Requirement already satisfied: librt==0.15.0 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (0.15.0)
+Requirement already satisfied: mypy==2.3.1 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (2.3.1)
+Requirement already satisfied: mypy-extensions==1.1.0 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (1.1.0)
+Requirement already satisfied: packaging==26.3 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (26.3)
+Requirement already satisfied: pathspec==1.1.1 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (1.1.1)
+Requirement already satisfied: pluggy==1.6.0 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (1.6.0)
+Requirement already satisfied: Pygments==2.21.0 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (2.21.0)
+Requirement already satisfied: pytest==9.1.1 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (9.1.1)
+Requirement already satisfied: pytest-asyncio==1.4.0 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (1.4.0)
+Requirement already satisfied: referencing==0.37.0 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (0.37.0)
+Requirement already satisfied: rpds-py==2026.6.3 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (2026.6.3)
+Requirement already satisfied: ruff==0.16.3 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (0.16.3)
+Requirement already satisfied: truststore==0.10.4 in ./.venv/lib/python3.12/site-packages (from nexora-business-ops==0.1.0) (0.10.4)
+Building wheels for collected packages: nexora-business-ops
+  Building editable for nexora-business-ops (pyproject.toml): started
+  Building editable for nexora-business-ops (pyproject.toml): finished with status 'done'
+  Created wheel for nexora-business-ops: filename=nexora_business_ops-0.1.0-0.editable-py3-none-any.whl size=3414 sha256=7dee2eaa117d8f00c7ea238c1de59d45d58e2f03ddede63941abcd246d41c3a0
+  Stored in directory: /private/var/folders/yy/vp87zdc13g7dlxp32m5xt2tr0000gn/T/pip-ephem-wheel-cache-wwt2z80w/wheels/06/76/53/34c94f10e5d31ceba71d3043f3a5a39a9c545132e9280b2c7e
+Successfully built nexora-business-ops
+Installing collected packages: nexora-business-ops
+  Attempting uninstall: nexora-business-ops
+    Found existing installation: nexora-business-ops 0.1.0
+    Uninstalling nexora-business-ops-0.1.0:
+      Successfully uninstalled nexora-business-ops-0.1.0
+Successfully installed nexora-business-ops-0.1.0
+[exit_code=0]
+
+$ make lint
+All checks passed!
+[exit_code=0]
+
+$ make format-check
+98 files already formatted
+[exit_code=0]
+
+$ make typecheck
+Success: no issues found in 26 source files
+[exit_code=0]
+
+$ make phase PHASE=01
+ Container nexora-foundation-redis-1 Running 
+ Container nexora-foundation-postgres-1 Running 
+ Container nexora-foundation-redis-1 Waiting 
+ Container nexora-foundation-postgres-1 Waiting 
+ Container nexora-foundation-redis-1 Healthy 
+ Container nexora-foundation-postgres-1 Healthy 
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+.......................................                                  [100%]
+39 passed in 2.23s
+[exit_code=0]

@@ -13,17 +13,21 @@ def test_production_rejects_fake_identity() -> None:
 
 @pytest.mark.unit
 def test_production_names_missing_keys_without_values() -> None:
+    secret_sentinel = "not-the-local-default-xxxxxxxxxxxxxxxx"
     with pytest.raises(ValidationError) as captured:
         Settings(
             environment="production",
             fake_identity_enabled=False,
-            session_hash_pepper="not-the-local-default",
+            auth0_issuer=None,
+            auth0_audience=None,
+            auth0_client_id=None,
+            session_hash_pepper=secret_sentinel,
         )
     message = str(captured.value)
     assert "auth0_issuer" in message
     assert "auth0_audience" in message
     assert "auth0_client_id" in message
-    assert "not-the-local-default" not in message
+    assert secret_sentinel not in message
 
 
 @pytest.mark.unit

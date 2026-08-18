@@ -1,19 +1,19 @@
-Phase 01 machine validation — 2026-08-17 — fake/local data only
+Phase 01 machine validation — 2026-08-18 — fake/local data only
 
 $ make test-unit
 .................                                                        [100%]
-17 passed, 22 deselected in 0.34s
+17 passed, 22 deselected in 0.37s
 [exit_code=0]
 
 $ make phase PHASE=01
- Container nexora-foundation-redis-1 Running 
- Container nexora-foundation-postgres-1 Running 
- Container nexora-foundation-redis-1 Waiting 
- Container nexora-foundation-postgres-1 Waiting 
- Container nexora-foundation-redis-1 Healthy 
- Container nexora-foundation-postgres-1 Healthy 
+ Container nexora-foundation-redis-1 Running
+ Container nexora-foundation-postgres-1 Running
+ Container nexora-foundation-redis-1 Waiting
+ Container nexora-foundation-postgres-1 Waiting
+ Container nexora-foundation-postgres-1 Healthy
+ Container nexora-foundation-redis-1 Healthy
 INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
 INFO  [alembic.runtime.migration] Will assume transactional DDL.
 .......................................                                  [100%]
-39 passed in 2.23s
+39 passed in 2.16s
 [exit_code=0]

@@ -4,7 +4,7 @@
   "status": "READY_FOR_HUMAN_REVIEW",
   "branch": "phase/01-foundations",
   "baseline_commit": "a4947c91584e5b6a538ce0f83418d1c21a4d559c",
-  "commit": "1dfe19dca491d089fb0021fa8406567786fa343e",
+  "commit": "86dea28e31bb02b35c001c2fa819718ecfd0b1ea",
   "changed_files": [
     {"path":".gitignore","change":"modified","allowlist_category":"MAY_MODIFY"},
     {"path":"PHASE_STATUS.md","change":"modified","allowlist_category":"MAY_MODIFY"},
@@ -94,18 +94,18 @@
     {"path":"artifacts/validation/phase-01/human-uat.md","change":"created","allowlist_category":"MAY_CREATE"}
   ],
   "commands": [
-    {"command":"git status --short","attempt":8,"exit_code":0,"evidence_path":"artifacts/validation/phase-01/phase-review.log"},
-    {"command":"git diff --check","attempt":8,"exit_code":0,"evidence_path":"artifacts/validation/phase-01/phase-review.log"},
-    {"command":"docker compose -f infra/compose.yaml config","attempt":8,"exit_code":0,"evidence_path":"artifacts/validation/phase-01/phase-review.log"},
-    {"command":"make bootstrap","attempt":8,"exit_code":0,"evidence_path":"artifacts/validation/phase-01/phase-review.log"},
-    {"command":"make lint","attempt":8,"exit_code":0,"evidence_path":"artifacts/validation/phase-01/phase-review.log"},
-    {"command":"make format-check","attempt":8,"exit_code":0,"evidence_path":"artifacts/validation/phase-01/phase-review.log"},
-    {"command":"make typecheck","attempt":8,"exit_code":0,"evidence_path":"artifacts/validation/phase-01/phase-review.log"},
-    {"command":"make db-migrate-check","attempt":8,"exit_code":0,"evidence_path":"artifacts/validation/phase-01/migration-check.log"},
-    {"command":"make test-unit","attempt":8,"exit_code":0,"evidence_path":"artifacts/validation/phase-01/automated-tests.log"},
-    {"command":"make test-contract","attempt":8,"exit_code":0,"evidence_path":"artifacts/validation/phase-01/contract-tests.log"},
-    {"command":"make test-security","attempt":8,"exit_code":0,"evidence_path":"artifacts/validation/phase-01/security-tests.log"},
-    {"command":"make phase PHASE=01","attempt":8,"exit_code":0,"evidence_path":"artifacts/validation/phase-01/automated-tests.log"}
+    {"command":"git status --short","attempt":10,"exit_code":0,"evidence_path":"artifacts/validation/phase-01/phase-review.log"},
+    {"command":"git diff --check","attempt":10,"exit_code":0,"evidence_path":"artifacts/validation/phase-01/phase-review.log"},
+    {"command":"docker compose -f infra/compose.yaml config","attempt":10,"exit_code":0,"evidence_path":"artifacts/validation/phase-01/phase-review.log"},
+    {"command":"make bootstrap","attempt":10,"exit_code":0,"evidence_path":"artifacts/validation/phase-01/phase-review.log"},
+    {"command":"make lint","attempt":10,"exit_code":0,"evidence_path":"artifacts/validation/phase-01/phase-review.log"},
+    {"command":"make format-check","attempt":10,"exit_code":0,"evidence_path":"artifacts/validation/phase-01/phase-review.log"},
+    {"command":"make typecheck","attempt":10,"exit_code":0,"evidence_path":"artifacts/validation/phase-01/phase-review.log"},
+    {"command":"make db-migrate-check","attempt":10,"exit_code":0,"evidence_path":"artifacts/validation/phase-01/migration-check.log"},
+    {"command":"make test-unit","attempt":10,"exit_code":0,"evidence_path":"artifacts/validation/phase-01/automated-tests.log"},
+    {"command":"make test-contract","attempt":10,"exit_code":0,"evidence_path":"artifacts/validation/phase-01/contract-tests.log"},
+    {"command":"make test-security","attempt":10,"exit_code":0,"evidence_path":"artifacts/validation/phase-01/security-tests.log"},
+    {"command":"make phase PHASE=01","attempt":10,"exit_code":0,"evidence_path":"artifacts/validation/phase-01/automated-tests.log"}
   ],
   "tests": [
     {"id":"P01-001","result":"PASSED","evidence_path":"artifacts/validation/phase-01/migration-check.log","negative_side_effect_count":0},
@@ -120,7 +120,8 @@
   "review_attempts": [
     {"attempt":1,"result":"FIX_REQUIRED","evidence_path":"artifacts/validation/phase-01/code-attempts.md","fix_summary":"Closed initial RLS, RBAC, session, provisioning, migration and evidence gaps."},
     {"attempt":2,"result":"FIX_REQUIRED","evidence_path":"artifacts/validation/phase-01/code-attempts.md","fix_summary":"Closed concurrency and direct-SQL state-integrity bypasses."},
-    {"attempt":3,"result":"PASSED","evidence_path":"artifacts/validation/phase-01/REVIEW.md","fix_summary":"Independent architecture, security and test audits report no open P0-P2."}
+    {"attempt":3,"result":"PASSED","evidence_path":"artifacts/validation/phase-01/REVIEW.md","fix_summary":"Independent architecture, security and test audits report no open P0-P2."},
+    {"attempt":4,"result":"PASSED","evidence_path":"artifacts/validation/phase-01/REVIEW.md","fix_summary":"Closed the local dotenv-dependent unit-test gap and reran the complete required validation sequence."}
   ],
   "findings": [
     {"severity":"P1","summary":"Forged or actor-less RLS context and broad authority grants","disposition":"RESOLVED","owner":"Codex","target":"Phase 01","evidence_path":"artifacts/validation/phase-01/security-review.md"},

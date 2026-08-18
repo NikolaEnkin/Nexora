@@ -1,0 +1,102 @@
+[build-system]
+requires = ["setuptools==84.0.0", "wheel==0.48.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nexora-business-ops"
+version = "0.1.0"
+description = "Controlled AI business operations foundation"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "alembic==1.19.1",
+  "annotated-doc==0.0.5",
+  "annotated-types==0.8.0",
+  "anyio==4.14.2",
+  "click==8.4.2",
+  "fastapi==0.141.1",
+  "h11==0.16.0",
+  "idna==3.18",
+  "Mako==1.4.1",
+  "MarkupSafe==3.0.3",
+  "psycopg[binary]==3.3.4",
+  "pydantic==2.13.4",
+  "pydantic-core==2.46.4",
+  "pydantic-settings==2.15.0",
+  "python-dotenv==1.2.3",
+  "redis==8.1.0",
+  "sqlalchemy==2.0.52",
+  "starlette==1.6.0",
+  "structlog==26.1.0",
+  "typing-extensions==4.16.0",
+  "typing-inspection==0.4.4",
+  "uvicorn==0.52.3",
+]
+
+[project.optional-dependencies]
+dev = [
+  "ast-serialize==0.8.0",
+  "attrs==26.1.0",
+  "httpcore2==2.10.0",
+  "httpx2==2.10.0",
+  "iniconfig==2.3.0",
+  "jsonschema==4.26.0",
+  "jsonschema-specifications==2025.9.1",
+  "librt==0.15.0",
+  "mypy==2.3.1",
+  "mypy-extensions==1.1.0",
+  "packaging==26.3",
+  "pathspec==1.1.1",
+  "pluggy==1.6.0",
+  "Pygments==2.21.0",
+  "pytest==9.1.1",
+  "pytest-asyncio==1.4.0",
+  "referencing==0.37.0",
+  "rpds-py==2026.6.3",
+  "ruff==0.16.3",
+  "truststore==0.10.4",
+]
+
+[tool.setuptools.packages.find]
+where = ["backend"]
+include = ["app*"]
+namespaces = true
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers"
+testpaths = ["backend/tests"]
+pythonpath = [".", "backend"]
+asyncio_mode = "auto"
+markers = [
+  "unit: tests without external services",
+  "contract: versioned schema and execution-control tests",
+  "integration: PostgreSQL or Redis integration tests",
+  "security: adversarial isolation, privilege, and redaction tests",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["backend"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ASYNC", "S", "RUF"]
+ignore = ["S101"]
+
+[tool.ruff.lint.per-file-ignores]
+"backend/tests/**" = ["S105", "S106", "S608"]
+"backend/alembic/versions/**" = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["backend/app"]
+mypy_path = "backend"
+explicit_package_bases = true
+exclude = ["backend/alembic"]
+plugins = ["pydantic.mypy"]
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true

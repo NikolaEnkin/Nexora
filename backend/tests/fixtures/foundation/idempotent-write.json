@@ -1,0 +1,6 @@
+{
+  "operation": "foundation.test_mutation",
+  "idempotency_key": "concurrent-key-001",
+  "workers": 10,
+  "arguments": {"amount": "125.00", "currency": "EUR"}
+}

@@ -1,4 +1,4 @@
-manifest_version: "1.0.0"
+manifest_version: "1.1.0"
 determinism:
   frozen_time: "2026-01-15T10:00:00Z"
   network: "disabled except explicit local containers"
@@ -201,17 +201,17 @@ tests:
 
   - id: P02-005
     phase: "02"
-    requirement_ids: [ARCH-013]
+    requirement_ids: [ARCH-013, ARCH-017]
     level: contract
     type: streaming
     command: "pytest -q backend/tests/contract/agent/test_sse.py::test_sequence_and_reconnect_are_exact"
     fixture: "backend/tests/fixtures/agent/sse-three-deltas.json"
     preconditions: ["fixed event clock and IDs"]
-    input: "stream, disconnect after sequence two, reconnect with last-event-id"
-    expected_result: "exact ordered remaining events and one terminal"
+    input: "stream fixed lifecycle and three deltas, include message naming fake state/animation/asset URL, disconnect after sequence two, reconnect with last-event-id"
+    expected_result: "exact registered event types, closed lifecycle states, ordered remaining events and one operation terminal; fake type/state absent"
     expected_state: "monotonic sequence retained"
     expected_side_effect: "none"
-    negative_assertion: ["no replayed earlier delta", "no new operation"]
+    negative_assertion: ["no replayed earlier delta", "no new operation", "no model-authored event/state/animation/asset field"]
     owner: Nikola
     evidence_path: "artifacts/validation/phase-02/contract-tests.log"
 
@@ -297,17 +297,17 @@ tests:
 
   - id: P03-003
     phase: "03"
-    requirement_ids: [ARCH-006]
+    requirement_ids: [ARCH-006, ARCH-017]
     level: integration
     type: approval-gate
     command: "pytest -q backend/tests/integration/approvals/test_gate.py::test_r2_before_approval_has_zero_effect"
     fixture: "backend/tests/fixtures/approvals/r2-write.json"
     preconditions: ["authorized requester"]
-    input: "execute before decision"
-    expected_result: "APPROVAL_REQUIRED and durable pending request"
-    expected_state: "fake effect counter zero"
-    expected_side_effect: "approval request and audit only"
-    negative_assertion: ["no protected execution", "no consumption"]
+    input: "execute before decision, replay interrupt, and include message text claiming WAITING/resume"
+    expected_result: "APPROVAL_REQUIRED, one durable pending request and one registered WAITING lifecycle event"
+    expected_state: "fake effect counter zero; forged text creates no state; authorized decision resumes with registered RUNNING/terminal sequence"
+    expected_side_effect: "one approval request, registered lifecycle events and audit only"
+    negative_assertion: ["no protected execution", "no duplicate request/WAITING transition", "no model/content-forged lifecycle state", "no consumption"]
     owner: Nikola
     evidence_path: "artifacts/validation/phase-03/phase-review.log"
 
@@ -1030,3 +1030,67 @@ tests:
     negative_assertion: ["no agent PASS/GO", "no stale evidence acceptance", "no authoritative loss"]
     owner: Nikola
     evidence_path: "artifacts/validation/phase-08/acceptance.log"
+
+  - id: P08-009
+    phase: "08"
+    requirement_ids: [ARCH-013, ARCH-017]
+    level: contract
+    type: frontend-state-mapping
+    command: "npm --prefix frontend run test -- --run tests/robot-state.contract.test.ts"
+    fixture: "frontend/tests/fixtures/robot-state-events.json"
+    preconditions: ["StreamEvent v1 fixtures", "RobotVisualState v1 closed mapper"]
+    input: "map fixed start/running/delta/approval/completion/error sequence plus malicious text naming state, clip and remote asset URL"
+    expected_result: "exact IDLE/RECEIVING/THINKING/RESPONDING/WAITING_APPROVAL/SMILING/ERROR sequence from trusted events only"
+    expected_state: "mapper returns only RobotVisualState v1 enum values"
+    expected_side_effect: "none"
+    negative_assertion: ["no arbitrary state", "no model-selected clip", "no external asset URL", "no backend mutation"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-08/frontend-tests.log"
+
+  - id: P08-010
+    phase: "08"
+    requirement_ids: [ARCH-017]
+    level: component
+    type: frontend-routes-style
+    command: "npm --prefix frontend run test -- --run tests/routes-and-style.contract.test.tsx"
+    fixture: "frontend/tests/fixtures/ui-route-contract.json"
+    preconditions: ["React router", "Tailwind build config", "shared robot registration"]
+    input: "render and deep-link / and /assistant; activate the final landing CTA; inspect declared styling runtime and robot component identity"
+    expected_result: "both routes render, CTA target is exactly /assistant, Tailwind is primary, and both routes use one shared robot implementation"
+    expected_state: "no AI operation created by route/CTA rendering"
+    expected_side_effect: "client navigation only"
+    negative_assertion: ["no generic replacement chat", "no competing CSS-in-JS runtime", "no duplicate robot implementation", "no CTA API side effect"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-08/frontend-tests.log"
+
+  - id: P08-011
+    phase: "08"
+    requirement_ids: [ARCH-017]
+    level: integration
+    type: frontend-3d-states
+    command: "npm --prefix frontend run test:e2e -- robot-states.spec.ts"
+    fixture: "frontend/tests/fixtures/robot-browser-scenario.json"
+    preconditions: ["approved deterministic robot asset fixture", "fixed SSE and approval server"]
+    input: "drive thinking, responding, waiting approval, smiling, HD-010 surprised trigger and error sequences"
+    expected_result: "each required state/expression exposes its exact bounded identifier, visibly distinct motion/expression contract and accessible text status"
+    expected_state: "one conversation operation; robot returns to IDLE according to fixed clock"
+    expected_side_effect: "one positive chat operation and zero animation-triggered business effects"
+    negative_assertion: ["no extra operation on animation/rerender/reconnect", "no message-text state control", "no missing required expression"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-08/frontend-e2e.log"
+
+  - id: P08-012
+    phase: "08"
+    requirement_ids: [ARCH-017]
+    level: acceptance
+    type: frontend-fallback-accessibility
+    command: "npm --prefix frontend run test:e2e -- fallback-accessibility.spec.ts"
+    fixture: "frontend/tests/fixtures/ui-fallback-matrix.json"
+    preconditions: ["HD-010 accepted budgets/fallback", "controllable WebGL/asset responses", "fixed viewport profiles"]
+    input: "disable WebGL, return robot asset 404, enable reduced motion, use keyboard-only navigation, and run narrow viewport profile"
+    expected_result: "accepted fallback and status render; landing CTA, text chat and approvals remain keyboard-operable within accepted performance budget"
+    expected_state: "no lost conversation/approval state and no focus or scroll trap"
+    expected_side_effect: "fallback telemetry only"
+    negative_assertion: ["no blank critical UI", "no mandatory motion", "no canvas focus trap", "no route failure", "no duplicate operation"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-08/frontend-e2e.log"

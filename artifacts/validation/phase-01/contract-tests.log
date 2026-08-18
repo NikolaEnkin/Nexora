@@ -1,0 +1,6 @@
+Phase 01 machine validation — 2026-08-18 — fake/local data only
+
+$ make test-contract
+...                                                                      [100%]
+3 passed, 36 deselected in 0.31s
+[exit_code=0]

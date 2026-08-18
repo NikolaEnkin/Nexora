@@ -1,0 +1,71 @@
+{
+  "contracts": {
+    "ActorContext": {
+      "version": "1",
+      "tenant_id": "20000000-0000-0000-0000-000000000001",
+      "actor_id": "30000000-0000-0000-0000-000000000001",
+      "subject": "auth0|fixture-owner",
+      "auth_method": "test_fixture",
+      "assurance": "standard",
+      "roles": ["OWNER"],
+      "permissions": ["tenant.manage", "tenant.read"],
+      "correlation_id": "90000000-0000-0000-0000-000000000001"
+    },
+    "AuthorizationDecision": {
+      "version": "1",
+      "effect": "ALLOW",
+      "permission": "tenant.manage",
+      "object_scope": "tenant",
+      "reason_code": "AUTHORIZED"
+    },
+    "DomainEvent": {
+      "version": "1",
+      "id": "40000000-0000-0000-0000-000000000001",
+      "tenant_id": "20000000-0000-0000-0000-000000000001",
+      "aggregate_type": "foundation_mutation",
+      "aggregate_id": "50000000-0000-0000-0000-000000000001",
+      "aggregate_version": 1,
+      "event_type": "foundation.mutation.recorded",
+      "event_version": 1,
+      "occurred_at": "2026-01-15T10:00:00Z",
+      "correlation_id": "90000000-0000-0000-0000-000000000001",
+      "causation_id": null,
+      "payload_ref": "foundation_mutations/50000000-0000-0000-0000-000000000001",
+      "payload_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "AuditEvent": {
+      "version": "1",
+      "id": "60000000-0000-0000-0000-000000000001",
+      "tenant_id": "20000000-0000-0000-0000-000000000001",
+      "actor_id": "30000000-0000-0000-0000-000000000001",
+      "action": "foundation.test_mutation",
+      "target_type": "foundation_mutation",
+      "target_id": "50000000-0000-0000-0000-000000000001",
+      "result": "SUCCEEDED",
+      "reason": "AUTHORIZED",
+      "correlation_id": "90000000-0000-0000-0000-000000000001",
+      "metadata": {"outcome": "SUCCEEDED"},
+      "occurred_at": "2026-01-15T10:00:00Z"
+    },
+    "IdempotencyRecord": {
+      "version": "1",
+      "id": "70000000-0000-0000-0000-000000000001",
+      "tenant_id": "20000000-0000-0000-0000-000000000001",
+      "actor_id": "30000000-0000-0000-0000-000000000001",
+      "operation": "foundation.test_mutation",
+      "key": "fixture-key-001",
+      "request_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "state": "SUCCEEDED",
+      "stored_result": {"accepted": true},
+      "stored_error": null
+    },
+    "ErrorEnvelope": {
+      "version": "1",
+      "code": "DEPENDENCY_UNAVAILABLE",
+      "message": "A required dependency is unavailable.",
+      "correlation_id": "90000000-0000-0000-0000-000000000001",
+      "retryable": true,
+      "details": {}
+    }
+  }
+}

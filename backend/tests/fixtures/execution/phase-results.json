@@ -1,0 +1,50 @@
+{
+  "ready": {
+    "schema_version": "1.0.0",
+    "phase": "01",
+    "status": "READY_FOR_HUMAN_REVIEW",
+    "branch": "phase/01-foundations",
+    "baseline_commit": null,
+    "commit": null,
+    "changed_files": [],
+    "commands": [
+      {"command": "make phase PHASE=01", "attempt": 1, "exit_code": 0, "evidence_path": "phase-review.log"}
+    ],
+    "tests": [
+      {"id": "P01-008", "result": "PASSED", "evidence_path": "phase-review.log", "negative_side_effect_count": 0}
+    ],
+    "review_attempts": [
+      {"attempt": 1, "result": "PASSED", "evidence_path": "phase-review.md", "fix_summary": "none"}
+    ],
+    "findings": [],
+    "blockers": [],
+    "evidence": [],
+    "human_uat": {
+      "required_ids": ["P01-UAT-01", "P01-UAT-02", "P01-UAT-03"],
+      "status": "PENDING",
+      "reviewer": "Nikola"
+    },
+    "known_limitations": []
+  },
+  "agent_pass": {
+    "schema_version": "1.0.0",
+    "phase": "01",
+    "status": "PASS",
+    "branch": "phase/01-foundations",
+    "baseline_commit": null,
+    "commit": null,
+    "changed_files": [],
+    "commands": [],
+    "tests": [],
+    "review_attempts": [],
+    "findings": [],
+    "blockers": [],
+    "evidence": [],
+    "human_uat": {
+      "required_ids": ["P01-UAT-01"],
+      "status": "PENDING",
+      "reviewer": "Nikola"
+    },
+    "known_limitations": []
+  }
+}

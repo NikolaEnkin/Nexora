@@ -1,0 +1,7 @@
+migration_role: nexora_migrator
+runtime_role: nexora_runtime
+runtime_must_not:
+  - SUPERUSER
+  - BYPASSRLS
+  - own_tables
+  - migrate

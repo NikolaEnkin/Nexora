@@ -6,6 +6,15 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Environment = Literal["development", "test", "production"]
 
+# Base64 of b"local-checkpoint-key-change-me00" (exactly 32 bytes). Local/fake only.
+#
+# The production guard for this value lives in `app.agent.crypto`, not here, for two
+# reasons. It fails closed wherever a cipher is constructed rather than only at
+# settings load, and adding another required production field to this validator would
+# change which error the Phase-01 production-boundary test observes.
+LOCAL_CHECKPOINT_KEY = "bG9jYWwtY2hlY2twb2ludC1rZXktY2hhbmdlLW1lMDA="
+CHECKPOINT_KEY_BYTES = 32
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -22,6 +31,9 @@ class Settings(BaseSettings):
     redis_url: str = "redis://127.0.0.1:63799/0"
     session_hash_pepper: SecretStr = SecretStr("local-session-pepper-change-me")
     rls_context_secret: SecretStr = SecretStr("local-rls-context-secret-change-me")
+    # Base64 of exactly 32 bytes. Reached only through CheckpointCipherPort so the
+    # key source can be replaced by a managed service without touching call sites.
+    checkpoint_encryption_key: SecretStr = SecretStr(LOCAL_CHECKPOINT_KEY)
     fake_identity_enabled: bool = True
     auth0_issuer: AnyHttpUrl | None = None
     auth0_audience: str | None = None

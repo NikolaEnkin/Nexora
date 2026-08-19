@@ -205,8 +205,12 @@ def upgrade() -> None:
         sa.Column("checkpoint_seq", sa.BigInteger(), nullable=False),
         sa.Column("state_schema_version", sa.SmallInteger(), nullable=False),
         sa.Column("key_id", sa.String(64), nullable=False),
+        # The serializer's type tag is not sensitive and is stored in the clear so
+        # a payload can be deserialized without first trusting its own ciphertext.
+        sa.Column("checkpoint_type", sa.String(32), nullable=False),
         sa.Column("checkpoint_nonce", postgresql.BYTEA(), nullable=False),
         sa.Column("checkpoint_ciphertext", postgresql.BYTEA(), nullable=False),
+        sa.Column("metadata_type", sa.String(32), nullable=False),
         sa.Column("metadata_nonce", postgresql.BYTEA(), nullable=False),
         sa.Column("metadata_ciphertext", postgresql.BYTEA(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
@@ -243,10 +247,13 @@ def upgrade() -> None:
         sa.Column("channel", sa.String(128), nullable=False),
         sa.Column("task_path", sa.String(256), nullable=False),
         sa.Column("key_id", sa.String(64), nullable=False),
+        sa.Column("value_type", sa.String(32), nullable=False),
         sa.Column("value_nonce", postgresql.BYTEA(), nullable=False),
         sa.Column("value_ciphertext", postgresql.BYTEA(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.CheckConstraint("idx >= -1", name="ck_agent_checkpoint_writes_idx"),
+        # LangGraph reserves negative indexes for its own channels; WRITES_IDX_MAP
+        # currently spans -1 (__error__) through -4 (__resume__).
+        sa.CheckConstraint("idx >= -4", name="ck_agent_checkpoint_writes_idx"),
         schema=SCHEMA,
     )
     op.create_index(

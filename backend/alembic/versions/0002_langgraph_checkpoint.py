@@ -350,9 +350,15 @@ def upgrade() -> None:
         f"GRANT SELECT, INSERT, UPDATE ON {SCHEMA}.agent_checkpoint_writes TO nexora_runtime"
     )
 
-    # The downgrade guard must be able to see active operations despite FORCE RLS.
+    # FORCE RLS hides these rows from the table owner too, so the internal
+    # BYPASSRLS guard role gets read-only visibility. The downgrade guard needs it
+    # to see active operations, and security tests need it to assert that a
+    # protected side-effect count really is zero across every tenant rather than
+    # merely invisible to the caller. The role is NOLOGIN and unreachable by the
+    # application; it is granted SELECT only.
     op.execute(f"GRANT USAGE ON SCHEMA {SCHEMA} TO nexora_rls_guard")
-    op.execute(f"GRANT SELECT ON {SCHEMA}.agent_operations TO nexora_rls_guard")
+    for table in AGENT_TABLES:
+        op.execute(f"GRANT SELECT ON {SCHEMA}.{table} TO nexora_rls_guard")
 
 
 def active_operation_count(bind: sa.Connection) -> int:

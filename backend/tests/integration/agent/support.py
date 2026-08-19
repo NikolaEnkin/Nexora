@@ -38,6 +38,7 @@ __all__ = [
     "TENANT_A",
     "TENANT_B",
     "actor_for",
+    "count_all",
     "insert_operation",
     "migration_engine",
     "reset_agent_data",
@@ -65,6 +66,30 @@ def actor_for(tenant_id: UUID, actor_id: UUID) -> ActorContext:
         ),
         correlation_id=CORRELATION_A if tenant_id == TENANT_A else CORRELATION_B,
     )
+
+
+def count_all(engine: Engine, table: str) -> int:
+    """Count every row in an agent table, across all tenants.
+
+    FORCE RLS hides rows from the table owner as well, so this reads through the
+    BYPASSRLS guard role. That is what lets a security negative assert a protected
+    side-effect count is genuinely zero rather than merely invisible to the caller.
+    """
+    if table not in {
+        "agent_operations",
+        "agent_operation_events",
+        "agent_checkpoints",
+        "agent_checkpoint_writes",
+    }:
+        raise ValueError(f"unknown agent table: {table}")
+    with engine.begin() as connection:
+        connection.execute(text("SET LOCAL ROLE nexora_rls_guard"))
+        try:
+            return int(
+                connection.execute(text(f"SELECT count(*) FROM nexora_agent.{table}")).scalar_one()
+            )
+        finally:
+            connection.execute(text("RESET ROLE"))
 
 
 def reset_agent_data(engine: Engine) -> None:

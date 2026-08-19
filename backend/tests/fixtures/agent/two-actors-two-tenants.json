@@ -1,0 +1,29 @@
+{
+  "description": "Tenant A owns an operation. Tenant B guesses its operation, thread and stream identifiers. Every response must be byte-identical to the response for an identifier that never existed.",
+  "tenant_a": "20000000-0000-0000-0000-000000000001",
+  "actor_a": "30000000-0000-0000-0000-000000000001",
+  "tenant_b": "20000000-0000-0000-0000-000000000002",
+  "actor_b": "30000000-0000-0000-0000-000000000002",
+  "client_request_id": "isolation-owned-001",
+  "message": "status of the runtime",
+  "never_existed_operation_id": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+  "expected_status": 404,
+  "expected_error_code": "OPERATION_NOT_FOUND",
+  "expected_details": {},
+  "forbidden_response_fragments": [
+    "20000000-0000-0000-0000-000000000001",
+    "30000000-0000-0000-0000-000000000001",
+    "status of the runtime",
+    "echo: status of the runtime",
+    "nexora_agent",
+    "agent_operations",
+    "agent_checkpoints",
+    "postgresql",
+    "psycopg",
+    "Traceback",
+    "SELECT",
+    "RECEIVED",
+    "RUNNING",
+    "COMPLETED"
+  ]
+}

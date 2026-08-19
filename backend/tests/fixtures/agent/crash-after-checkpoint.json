@@ -1,0 +1,16 @@
+{
+  "description": "Deterministic failure injection. A crash lands after the durable checkpoint but before the caller sees a response; the retry must resume the same operation and finish once.",
+  "tenant_id": "20000000-0000-0000-0000-000000000001",
+  "actor_id": "30000000-0000-0000-0000-000000000001",
+  "client_request_id": "crash-after-checkpoint-001",
+  "message": "status of the runtime",
+  "crash_after_node": "route",
+  "expected_nodes_before_crash": ["receive", "validate", "route"],
+  "expected_nodes_after_resume": ["answer", "complete"],
+  "expected_reply": "echo: status of the runtime",
+  "expected_terminal_status": "COMPLETED",
+  "expected_final_checkpoint_seq": 5,
+  "expected_operation_count": 1,
+  "expected_terminal_event_count": 1,
+  "bounded_retry_attempts": 3
+}

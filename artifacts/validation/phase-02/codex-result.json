@@ -1,0 +1,607 @@
+{
+  "schema_version": "1.0.0",
+  "phase": "02",
+  "status": "READY_FOR_HUMAN_REVIEW",
+  "branch": "phase/02-agent-runtime",
+  "baseline_commit": "e4d563dbb5610916aba9cbfea089f80a2210945c",
+  "commit": "632ab57d3535a76089d64b9694c8f67609879fb6",
+  "changed_files": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "Makefile",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "artifacts/validation/phase-02/automated-tests.log",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-02/contract-tests.log",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-02/migration-check.log",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-02/per-test-evidence.log",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-02/phase-review.log",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-02/security-tests.log",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/alembic/versions/0002_langgraph_checkpoint.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/agent/__init__.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/agent/checkpointer.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/agent/contracts.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/agent/crypto.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/agent/errors.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/agent/events.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/agent/graph.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/agent/identity.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/agent/model.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/agent/operations.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/agent/routing.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/agent/runtime.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/agent/state.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/agent/tools.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/agent/wiring.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/api/chat.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/config.py",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "backend/app/events/service.py",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "backend/app/main.py",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "backend/app/observability/__init__.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/observability/ports.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/observability/trace.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/contract/agent/test_agent_state.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/contract/agent/test_sse.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/fixtures/agent/agent-secret-message.json",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/fixtures/agent/agent-state-v1.json",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/fixtures/agent/checkpoint-run.json",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/fixtures/agent/crash-after-checkpoint.json",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/fixtures/agent/malicious-tool-request.json",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/fixtures/agent/routing-cases.yaml",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/fixtures/agent/sse-three-deltas.json",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/fixtures/agent/stream-event-v1.json",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/fixtures/agent/two-actors-two-tenants.json",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/integration/agent/support.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/integration/agent/test_chat_api.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/integration/agent/test_checkpoint.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/integration/agent/test_events.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/integration/agent/test_operations.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/integration/agent/test_recovery.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/security/agent/test_migration_boundary.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/security/agent/test_no_tools.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/security/agent/test_thread_isolation.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/security/agent/test_trace_redaction.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/unit/agent/test_model_adapter.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/unit/agent/test_routes.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "docs/adr/ADR-003-agent-checkpoint-storage.md",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "docs/execplans/phase-02.md",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "pyproject.toml",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "scripts/codex/migration_check.py",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "tests/manifest.yaml",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    }
+  ],
+  "commands": [
+    {
+      "command": "git status --short",
+      "attempt": 1,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-02/phase-review.log"
+    },
+    {
+      "command": "git diff --check",
+      "attempt": 1,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-02/phase-review.log"
+    },
+    {
+      "command": "make lint",
+      "attempt": 2,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-02/phase-review.log"
+    },
+    {
+      "command": "make format-check",
+      "attempt": 2,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-02/phase-review.log"
+    },
+    {
+      "command": "make typecheck",
+      "attempt": 2,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-02/phase-review.log"
+    },
+    {
+      "command": "make db-migrate-check",
+      "attempt": 6,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-02/migration-check.log"
+    },
+    {
+      "command": "make test-unit",
+      "attempt": 2,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-02/automated-tests.log"
+    },
+    {
+      "command": "make test-contract",
+      "attempt": 2,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-02/contract-tests.log"
+    },
+    {
+      "command": "make test-integration",
+      "attempt": 1,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-02/phase-review.log"
+    },
+    {
+      "command": "make test-security",
+      "attempt": 2,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-02/security-tests.log"
+    },
+    {
+      "command": "make phase PHASE=01",
+      "attempt": 1,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-02/phase-review.log"
+    },
+    {
+      "command": "make phase PHASE=02",
+      "attempt": 2,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-02/phase-review.log"
+    }
+  ],
+  "tests": [
+    {
+      "id": "P02-001",
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-02/contract-tests.log",
+      "negative_side_effect_count": 0
+    },
+    {
+      "id": "P02-002",
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-02/automated-tests.log",
+      "negative_side_effect_count": 0
+    },
+    {
+      "id": "P02-003",
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-02/phase-review.log",
+      "negative_side_effect_count": 0
+    },
+    {
+      "id": "P02-004",
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-02/phase-review.log",
+      "negative_side_effect_count": 0
+    },
+    {
+      "id": "P02-005",
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-02/contract-tests.log",
+      "negative_side_effect_count": 0
+    },
+    {
+      "id": "P02-006",
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-02/security-tests.log",
+      "negative_side_effect_count": 0
+    },
+    {
+      "id": "P02-007",
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-02/security-tests.log",
+      "negative_side_effect_count": 0
+    },
+    {
+      "id": "P02-008",
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-02/security-tests.log",
+      "negative_side_effect_count": 0
+    }
+  ],
+  "review_attempts": [
+    {
+      "attempt": 1,
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-02/reviewer.md",
+      "fix_summary": "architecture, contract, migration and recovery review; no open finding"
+    },
+    {
+      "attempt": 2,
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-02/security-review.md",
+      "fix_summary": "security review; no open finding"
+    },
+    {
+      "attempt": 3,
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-02/test-audit.md",
+      "fix_summary": "test-quality audit; no skip, xfail or weakened assertion"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "P1",
+      "summary": "F-01 pre-existing Phase-01 idempotent insert did not arbitrate the deterministic primary key, so concurrent duplicates intermittently raised UniqueViolation",
+      "disposition": "RESOLVED",
+      "owner": "Nikola",
+      "target": "Phase 02 under amendment A-4",
+      "evidence_path": "artifacts/validation/phase-02/code-attempts.md"
+    },
+    {
+      "severity": "P1",
+      "summary": "R-01 the receive node set RUNNING before validate could refuse a terminal operation, reactivating it",
+      "disposition": "RESOLVED",
+      "owner": "Nikola",
+      "target": "Phase 02",
+      "evidence_path": "artifacts/validation/phase-02/code-attempts.md"
+    },
+    {
+      "severity": "P2",
+      "summary": "R-02 event payloads were stored as plaintext JSONB while checkpoints encrypted the same message content",
+      "disposition": "RESOLVED",
+      "owner": "Nikola",
+      "target": "Phase 02",
+      "evidence_path": "artifacts/validation/phase-02/code-attempts.md"
+    },
+    {
+      "severity": "P2",
+      "summary": "R-03 optimistic event sequence allocation lost the race under ten concurrent writers",
+      "disposition": "RESOLVED",
+      "owner": "Nikola",
+      "target": "Phase 02",
+      "evidence_path": "artifacts/validation/phase-02/code-attempts.md"
+    },
+    {
+      "severity": "P2",
+      "summary": "R-04 the production checkpoint-key guard in Settings changed which error a Phase-01 regression test observes",
+      "disposition": "RESOLVED",
+      "owner": "Nikola",
+      "target": "Phase 02",
+      "evidence_path": "artifacts/validation/phase-02/code-attempts.md"
+    },
+    {
+      "severity": "P3",
+      "summary": "R-05 make db-migrate-check assumed an already-empty fixture database",
+      "disposition": "RESOLVED",
+      "owner": "Nikola",
+      "target": "Phase 02",
+      "evidence_path": "artifacts/validation/phase-02/code-attempts.md"
+    }
+  ],
+  "blockers": [],
+  "evidence": [
+    {
+      "path": "artifacts/validation/phase-02/REVIEW.md",
+      "purpose": "phase review summary, amendments, findings and dispositions",
+      "sha256": "73353e119a93322dcb8694d787dda2da50f5311b65302a51a383ae777bb8ff1f"
+    },
+    {
+      "path": "artifacts/validation/phase-02/automated-tests.log",
+      "purpose": "unit test run",
+      "sha256": "cdf26be077c6deef13995acef44fd16ce4200e839837dbed1297c9fedf39f466"
+    },
+    {
+      "path": "artifacts/validation/phase-02/changed-files.txt",
+      "purpose": "changed-file inventory versus the baseline commit",
+      "sha256": "61c132c427b56ae59fc8f6eb79fa82837252b9e98389918acb54a1328e6fa14d"
+    },
+    {
+      "path": "artifacts/validation/phase-02/code-attempts.md",
+      "purpose": "every failed command attempt and its root cause",
+      "sha256": "78ffa763e5595112100094b5766e789cbd8229b766867f30421de0e82b9ebf9b"
+    },
+    {
+      "path": "artifacts/validation/phase-02/codex-result.json",
+      "purpose": "machine-readable phase result"
+    },
+    {
+      "path": "artifacts/validation/phase-02/contract-tests.log",
+      "purpose": "contract test run",
+      "sha256": "609ee511dc4f4908aac9b9dd481a007d1e796b338c5b30500df114e26329031d"
+    },
+    {
+      "path": "artifacts/validation/phase-02/human-uat.md",
+      "purpose": "exact human UAT instructions, pending Nikola",
+      "sha256": "8414219e0600366827923157d08e809fd313598542796b35cae3bede90402d36"
+    },
+    {
+      "path": "artifacts/validation/phase-02/migration-check.log",
+      "purpose": "migration upgrade, drift and recovery validation",
+      "sha256": "334f8d326a313e5de7301436a483138cb0cb02aca4f49e1069ed2ba55dc2c6bc"
+    },
+    {
+      "path": "artifacts/validation/phase-02/per-test-evidence.log",
+      "purpose": "each P02 manifest command executed individually",
+      "sha256": "453546833287aa7ae830f3ebe32a10e9a50cda38b16225ea245d181783326ad6"
+    },
+    {
+      "path": "artifacts/validation/phase-02/phase-review.log",
+      "purpose": "integration suite plus both complete phase suites",
+      "sha256": "b3175d340977824192cd4e04217b924370248598ab4a85c2898371cdb5d8fa68"
+    },
+    {
+      "path": "artifacts/validation/phase-02/reviewer.md",
+      "purpose": "architecture, contract, migration and recovery review",
+      "sha256": "6f516ffbff961ac1887e9cf8d239b68b9bba26903772c71939b138f44032c706"
+    },
+    {
+      "path": "artifacts/validation/phase-02/security-review.md",
+      "purpose": "security review",
+      "sha256": "cf9c47893891ddd393f6c70f0a2e649164909938e9624ce157d57f6e6cc4cc90"
+    },
+    {
+      "path": "artifacts/validation/phase-02/security-tests.log",
+      "purpose": "security test run",
+      "sha256": "9115c2b644bad9ec3dc97568d4838eab70ecac1b6d8d3521e5e599573923f922"
+    },
+    {
+      "path": "artifacts/validation/phase-02/test-audit.md",
+      "purpose": "test quality and false-positive audit",
+      "sha256": "92d9da63b39ddd70172995db831fc4787cceaffe00dd367b5bed2d633c74779a"
+    }
+  ],
+  "human_uat": {
+    "required_ids": [
+      "P02-UAT-01",
+      "P02-UAT-02",
+      "P02-UAT-03"
+    ],
+    "status": "PENDING",
+    "reviewer": "Nikola"
+  },
+  "known_limitations": [
+    {
+      "summary": "Production checkpoint-encryption key management is abstracted behind CheckpointCipherPort and exercised with a fixed local key; no production key service is selected",
+      "owner": "Nikola",
+      "target": "HD-009 / Phase 08"
+    },
+    {
+      "summary": "NEXORA_CHECKPOINT_ENCRYPTION_KEY is absent from .env.example, which is outside the Phase-02 allowlist; the setting has a working local default and production startup is disabled",
+      "owner": "Nikola",
+      "target": "Phase 03 packet or a one-line amendment"
+    },
+    {
+      "summary": "/chat has no HTTP authentication boundary yet and requires a trusted ActorContext on request.state.actor; wiring the Phase-01 session boundary to HTTP is not in the Phase-02 packet",
+      "owner": "Nikola",
+      "target": "Phase 03"
+    },
+    {
+      "summary": "langsmith arrives transitively via langchain-core and is network-capable; it is unused and the test suite blocks every non-loopback socket",
+      "owner": "Nikola",
+      "target": "Phase 03"
+    },
+    {
+      "summary": "LangGraph warns that deserializing the unregistered AgentState enums and AgentMessage from a checkpoint will be blocked in a future version; restore works today but a langgraph-checkpoint upgrade will require allowed_msgpack_modules registration",
+      "owner": "Nikola",
+      "target": "Phase 03, or whenever langgraph-checkpoint is upgraded"
+    }
+  ]
+}

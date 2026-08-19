@@ -2,6 +2,8 @@ from uuid import UUID, uuid4
 
 from fastapi import FastAPI, Request
 
+from app.agent.wiring import AgentComposition, build_agent_composition
+from app.api.chat import router as chat_router
 from app.api.health import ReadinessPort
 from app.api.health import router as health_router
 from app.config import Settings, get_settings
@@ -28,6 +30,9 @@ def _correlation_id(request: Request) -> str:
 def create_app(
     settings: Settings | None = None,
     readiness: ReadinessPort | None = None,
+    *,
+    agent: AgentComposition | None = None,
+    enable_chat: bool = True,
 ) -> FastAPI:
     active_settings = settings or get_settings()
     configure_logging(
@@ -35,6 +40,7 @@ def create_app(
         secret_values=(
             active_settings.session_hash_pepper.get_secret_value(),
             active_settings.rls_context_secret.get_secret_value(),
+            active_settings.checkpoint_encryption_key.get_secret_value(),
             active_settings.database_url,
             active_settings.redis_url,
         ),
@@ -52,6 +58,15 @@ def create_app(
 
     install_error_handlers(app)
     app.include_router(health_router)
+
+    # `/chat` is feature-disabled independently of health. Rollback can drop the
+    # runtime while liveness and readiness keep serving (packet §17).
+    if enable_chat:
+        composition = agent or build_agent_composition(active_settings)
+        app.state.agent = composition
+        app.state.chat = composition.dependencies
+        app.include_router(chat_router)
+
     return app
 
 

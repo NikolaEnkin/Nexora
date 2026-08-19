@@ -1,0 +1,20 @@
+{
+  "description": "A fixed run used to prove durable checkpoint restore. The runtime is destroyed after node two and rebuilt from scratch; the reloaded state and sequence must match exactly.",
+  "tenant_id": "20000000-0000-0000-0000-000000000001",
+  "actor_id": "30000000-0000-0000-0000-000000000001",
+  "client_request_id": "checkpoint-run-001",
+  "message": "status of the runtime",
+  "expected_reply": "echo: status of the runtime",
+  "expected_route": "ECHO",
+  "expected_terminal_status": "COMPLETED",
+  "expected_nodes": ["receive", "validate", "route", "answer", "complete"],
+  "expected_final_checkpoint_seq": 5,
+  "interrupt_after_node": "validate",
+  "expected_seq_at_interrupt": 2,
+  "business_tables_that_must_stay_empty": [
+    "foundation_mutations",
+    "domain_events",
+    "outbox_events",
+    "audit_events"
+  ]
+}

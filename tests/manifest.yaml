@@ -237,7 +237,7 @@ tests:
     level: integration
     type: security
     command: "pytest -q backend/tests/security/agent/test_trace_redaction.py::test_secret_is_protected_in_checkpoint_trace_and_log"
-    fixture: "backend/tests/fixtures/security/agent-secret-message.json"
+    fixture: "backend/tests/fixtures/agent/agent-secret-message.json"
     preconditions: ["captured checkpointer/trace/log sinks"]
     input: "process message containing fake secret"
     expected_result: "authorized checkpoint adapter restores state; sinks are redacted"

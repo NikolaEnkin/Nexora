@@ -111,6 +111,12 @@ class FoundationMutationService:
 
         with self.sessions() as session, session.begin():
             set_request_context(session, actor.tenant_id, actor.actor_id)
+            # ON CONFLICT carries no column target on purpose. `record_id` is a
+            # deterministic uuid5, so concurrent duplicates collide on the primary
+            # key as well as on the scoped-key unique index. Naming only the scoped
+            # key as arbiter leaves the primary-key collision unhandled, and the
+            # loser of the race raises UniqueViolation instead of converging on the
+            # first durable result (BR-01-003).
             inserted = session.execute(
                 text(
                     """INSERT INTO idempotency_records (
@@ -121,8 +127,7 @@ class FoundationMutationService:
                         :id, :tenant_id, :actor_id, :operation, :key, :request_hash,
                         1, 'IN_PROGRESS', NULL, NULL, :lease_expires_at,
                         :expires_at, :now, :now
-                    ) ON CONFLICT (tenant_id, actor_id, operation, idempotency_key)
-                    DO NOTHING RETURNING id"""
+                    ) ON CONFLICT DO NOTHING RETURNING id"""
                 ),
                 {
                     "id": record_id,

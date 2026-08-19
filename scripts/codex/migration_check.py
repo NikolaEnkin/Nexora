@@ -46,10 +46,52 @@ REQUIRED_FUNCTIONS = {
 }
 EXPECTED_CATALOG_SHA256 = "a3981e630def8e0fc3e9134fff66c1d95aef98e3dc8051027bff8dc008a33160"
 
+PHASE_01_HEAD = "0001_foundation"
+PHASE_02_HEAD = "0002_langgraph_checkpoint"
+MIGRATION_CHAIN = [PHASE_02_HEAD, PHASE_01_HEAD]
+
+AGENT_SCHEMA = "nexora_agent"
+AGENT_TABLES = {
+    "agent_checkpoint_writes",
+    "agent_checkpoints",
+    "agent_operation_events",
+    "agent_operations",
+}
+AGENT_FUNCTIONS = {
+    "protect_agent_operation_state",
+    "reject_agent_checkpoint_change",
+    "reject_agent_event_change",
+}
+AGENT_TRIGGERS = {
+    "trg_agent_checkpoints_immutable",
+    "trg_agent_events_append_only",
+    "trg_agent_operations_protect_state",
+}
+# Least privilege for the runtime role. DELETE is deliberately absent everywhere:
+# operations are cancelled and retained, checkpoints are preserved for repair.
+EXPECTED_AGENT_GRANTS = {
+    ("agent_checkpoint_writes", "INSERT"),
+    ("agent_checkpoint_writes", "SELECT"),
+    ("agent_checkpoint_writes", "UPDATE"),
+    ("agent_checkpoints", "INSERT"),
+    ("agent_checkpoints", "SELECT"),
+    ("agent_operation_events", "INSERT"),
+    ("agent_operation_events", "SELECT"),
+    ("agent_operations", "INSERT"),
+    ("agent_operations", "SELECT"),
+    ("agent_operations", "UPDATE"),
+}
+FORBIDDEN_AGENT_PRIVILEGES = {"DELETE", "TRUNCATE", "REFERENCES", "TRIGGER"}
+EXPECTED_AGENT_CATALOG_SHA256 = "8f5e428d2fcd1d8ba52758e0773342287b8c47c9d23c1e8fbad9d888c2834572"
+
 
 def _catalog_hash(snapshot: dict[str, Any]) -> str:
     encoded = json.dumps(snapshot, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _without_head(snapshot: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in snapshot.items() if key != "head"}
 
 
 def _guard_local_database(url: str) -> None:
@@ -69,8 +111,10 @@ def _guard_local_database(url: str) -> None:
     script = ScriptDirectory.from_config(Config("backend/alembic.ini"))
     heads = script.get_heads()
     revisions = list(script.walk_revisions())
-    if heads != ["0001_foundation"] or [item.revision for item in revisions] != ["0001_foundation"]:
-        raise RuntimeError("downgrade check requires 0001_foundation to be the sole revision/head")
+    if heads != [PHASE_02_HEAD] or [item.revision for item in revisions] != MIGRATION_CHAIN:
+        raise RuntimeError(
+            f"downgrade check requires the exact ordered revision chain {MIGRATION_CHAIN}"
+        )
 
 
 def _alembic(*arguments: str) -> None:
@@ -82,7 +126,7 @@ def _alembic(*arguments: str) -> None:
     )
 
 
-def _snapshot(url: str) -> dict[str, Any]:
+def _snapshot(url: str, expected_head: str) -> dict[str, Any]:
     engine = create_engine(url)
     with engine.connect() as connection:
         tables = set(
@@ -95,7 +139,7 @@ def _snapshot(url: str) -> dict[str, Any]:
                 f"unexpected tables: expected={sorted(REQUIRED_TABLES)} actual={sorted(tables)}"
             )
         head = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-        if head != "0001_foundation":
+        if head != expected_head:
             raise AssertionError(f"unexpected migration head: {head}")
         rls_rows = connection.execute(
             text(
@@ -285,23 +329,281 @@ def _snapshot(url: str) -> dict[str, Any]:
         }
 
 
+def _agent_snapshot(url: str) -> dict[str, Any]:
+    """Phase-02 runtime schema. Asserted semantically, then hashed as a drift detector."""
+    engine = create_engine(url)
+    with engine.connect() as connection:
+        tables = set(
+            connection.execute(
+                text("SELECT tablename FROM pg_tables WHERE schemaname = :schema"),
+                {"schema": AGENT_SCHEMA},
+            ).scalars()
+        )
+        if tables != AGENT_TABLES:
+            raise AssertionError(
+                f"unexpected agent tables: expected={sorted(AGENT_TABLES)} actual={sorted(tables)}"
+            )
+        schema_owner = connection.execute(
+            text("SELECT nspowner::regrole::text FROM pg_namespace WHERE nspname = :schema"),
+            {"schema": AGENT_SCHEMA},
+        ).scalar_one()
+        if schema_owner != "nexora_migrator":
+            raise AssertionError(f"agent schema is owned by {schema_owner}")
+        schema_access = connection.execute(
+            text(
+                """SELECT has_schema_privilege('nexora_runtime', :schema, 'USAGE'),
+                          has_schema_privilege('nexora_runtime', :schema, 'CREATE'),
+                          pg_catalog.has_schema_privilege('public', :schema, 'USAGE')"""
+            ),
+            {"schema": AGENT_SCHEMA},
+        ).one()
+        if not schema_access[0]:
+            raise AssertionError("runtime cannot use the agent schema")
+        if schema_access[1]:
+            raise AssertionError("runtime can create objects in the agent schema")
+        if schema_access[2]:
+            raise AssertionError("PUBLIC can use the agent schema")
+
+        rls_rows = connection.execute(
+            text(
+                """SELECT relname, relrowsecurity, relforcerowsecurity, relowner::regrole::text
+                FROM pg_class
+                WHERE relnamespace = CAST(:schema AS regnamespace) AND relname = ANY(:tables)
+                ORDER BY relname"""
+            ),
+            {"schema": AGENT_SCHEMA, "tables": sorted(AGENT_TABLES)},
+        ).all()
+        if {row[0] for row in rls_rows} != AGENT_TABLES:
+            raise AssertionError("an agent table is missing from the RLS inspection")
+        if any(not row[1] or not row[2] for row in rls_rows):
+            raise AssertionError("an agent table lacks ENABLE/FORCE RLS")
+        if any(row[3] != "nexora_migrator" for row in rls_rows):
+            raise AssertionError("an agent table is not owned by nexora_migrator")
+
+        policies = connection.execute(
+            text(
+                """SELECT tablename, policyname, qual, with_check FROM pg_policies
+                WHERE schemaname = :schema ORDER BY tablename, policyname"""
+            ),
+            {"schema": AGENT_SCHEMA},
+        ).all()
+        if {row.tablename for row in policies} != AGENT_TABLES:
+            raise AssertionError("agent tenant/actor policy set is incomplete")
+        for row in policies:
+            if "nexora_context_allows" not in (row.qual or ""):
+                raise AssertionError(f"{row.tablename} policy does not use the tenant authority")
+            if "app.actor_id" not in (row.qual or ""):
+                raise AssertionError(f"{row.tablename} policy does not bind the actor")
+
+        grants = connection.execute(
+            text(
+                """SELECT table_name, privilege_type FROM information_schema.role_table_grants
+                WHERE grantee = 'nexora_runtime' AND table_schema = :schema
+                ORDER BY table_name, privilege_type"""
+            ),
+            {"schema": AGENT_SCHEMA},
+        ).all()
+        actual_grants = {(row.table_name, row.privilege_type) for row in grants}
+        if actual_grants != EXPECTED_AGENT_GRANTS:
+            raise AssertionError(
+                "agent runtime grants differ from the least-privilege contract: "
+                f"unexpected={sorted(actual_grants - EXPECTED_AGENT_GRANTS)} "
+                f"missing={sorted(EXPECTED_AGENT_GRANTS - actual_grants)}"
+            )
+        forbidden = {item for item in actual_grants if item[1] in FORBIDDEN_AGENT_PRIVILEGES}
+        if forbidden:
+            raise AssertionError(f"runtime holds a forbidden agent privilege: {sorted(forbidden)}")
+
+        other_grantees = connection.execute(
+            text(
+                """SELECT DISTINCT grantee FROM information_schema.role_table_grants
+                WHERE table_schema = :schema
+                  AND grantee NOT IN ('nexora_runtime', 'nexora_migrator', 'nexora_rls_guard')"""
+            ),
+            {"schema": AGENT_SCHEMA},
+        ).scalars()
+        unexpected_grantees = sorted(other_grantees)
+        if unexpected_grantees:
+            raise AssertionError(f"unexpected agent schema grantee: {unexpected_grantees}")
+
+        # The runtime must not be able to reach business tables through this schema.
+        cross_schema = connection.execute(
+            text(
+                """SELECT count(*) FROM information_schema.role_table_grants
+                WHERE grantee = 'nexora_runtime' AND table_schema = 'public'
+                  AND privilege_type IN ('DELETE', 'TRUNCATE')"""
+            )
+        ).scalar_one()
+        if cross_schema:
+            raise AssertionError("runtime gained DELETE/TRUNCATE on a public table")
+
+        function_rows = connection.execute(
+            text(
+                """SELECT p.proname, p.proowner::regrole::text, COALESCE(p.proacl::text, ''),
+                          pg_get_functiondef(p.oid)
+                FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+                WHERE n.nspname = :schema ORDER BY p.proname"""
+            ),
+            {"schema": AGENT_SCHEMA},
+        ).all()
+        if {row.proname for row in function_rows} != AGENT_FUNCTIONS:
+            raise AssertionError("required agent state/append-only function is missing")
+
+        trigger_rows = connection.execute(
+            text(
+                """SELECT c.relname, t.tgname, pg_get_triggerdef(t.oid)
+                FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid
+                WHERE NOT t.tgisinternal AND c.relnamespace = CAST(:schema AS regnamespace)
+                ORDER BY c.relname, t.tgname"""
+            ),
+            {"schema": AGENT_SCHEMA},
+        ).all()
+        if {row.tgname for row in trigger_rows} != AGENT_TRIGGERS:
+            raise AssertionError("required agent trigger is missing or unexpected")
+
+        objects = connection.execute(
+            text(
+                """SELECT c.relname, c.relkind, COALESCE(i.indisunique, false),
+                          CASE WHEN c.relkind = 'i' THEN pg_get_indexdef(c.oid) ELSE '' END
+                FROM pg_class c
+                LEFT JOIN pg_index i ON i.indexrelid = c.oid
+                WHERE c.relnamespace = CAST(:schema AS regnamespace) AND c.relkind IN ('r', 'i')
+                ORDER BY c.relkind, c.relname"""
+            ),
+            {"schema": AGENT_SCHEMA},
+        ).all()
+        index_definitions = [row[3] for row in objects if row[1] == "i"]
+        terminal_index = [
+            definition
+            for definition in index_definitions
+            if "uq_agent_events_terminal_once" in definition
+        ]
+        # Postgres renders the predicate as ((type)::text = 'stream.completed'::text),
+        # so assert the properties rather than one exact rendering.
+        if len(terminal_index) != 1:
+            raise AssertionError("terminal-event uniqueness index is missing")
+        definition = terminal_index[0]
+        if not definition.startswith("CREATE UNIQUE INDEX"):
+            raise AssertionError("terminal-event index is not unique")
+        if " WHERE " not in definition or "'stream.completed'" not in definition:
+            raise AssertionError("terminal-event index is not restricted to the terminal type")
+
+        constraints = connection.execute(
+            text(
+                """SELECT conname, contype, pg_get_constraintdef(oid) FROM pg_constraint
+                WHERE connamespace = CAST(:schema AS regnamespace) ORDER BY conname"""
+            ),
+            {"schema": AGENT_SCHEMA},
+        ).all()
+        columns = connection.execute(
+            text(
+                """SELECT table_name, column_name, data_type, udt_name, is_nullable,
+                          COALESCE(column_default, '')
+                FROM information_schema.columns WHERE table_schema = :schema
+                ORDER BY table_name, ordinal_position"""
+            ),
+            {"schema": AGENT_SCHEMA},
+        ).all()
+        # No business column may appear in a coordination table.
+        forbidden_columns = {
+            "amount",
+            "approval_id",
+            "client_id",
+            "currency",
+            "invoice_id",
+            "offer_id",
+            "payment_id",
+            "risk_level",
+        }
+        present = {row.column_name for row in columns}
+        if present & forbidden_columns:
+            raise AssertionError(
+                f"business column in agent schema: {sorted(present & forbidden_columns)}"
+            )
+
+        return {
+            "objects": [tuple(row) for row in objects],
+            "constraints": [tuple(row) for row in constraints],
+            "columns": [tuple(row) for row in columns],
+            "functions": [tuple(row) for row in function_rows],
+            "triggers": [tuple(row) for row in trigger_rows],
+            "policies": [tuple(row) for row in policies],
+            "grants": sorted(actual_grants),
+            "rls": [tuple(row) for row in rls_rows],
+            "schema_owner": schema_owner,
+        }
+
+
+def _clear_fixture_rows(url: str) -> None:
+    """Empty the disposable fixture database's runtime rows, if the schema exists.
+
+    Only ever reached after `_guard_local_database` has proved this is the exact
+    local fixture identity and the destructive opt-in is present.
+    """
+    engine = create_engine(url)
+    with engine.begin() as connection:
+        exists = connection.execute(
+            text("SELECT to_regclass('nexora_agent.agent_operations') IS NOT NULL")
+        ).scalar_one()
+        if exists:
+            connection.execute(
+                text(
+                    """TRUNCATE TABLE nexora_agent.agent_checkpoint_writes,
+                    nexora_agent.agent_checkpoints, nexora_agent.agent_operation_events,
+                    nexora_agent.agent_operations CASCADE"""
+                )
+            )
+
+
 def main() -> None:
     url = get_migration_settings().migration_database_url
     _guard_local_database(url)
+
+    # Start from base so the run is hermetic regardless of what the previous run
+    # or a preceding test suite left behind. Without this the check silently
+    # depends on an already-empty fixture database.
+    #
+    # The Phase-02 downgrade guard deliberately refuses while any operation is
+    # still active, so the disposable fixture rows are cleared first. The guard
+    # itself is proved separately by
+    # backend/tests/security/agent/test_migration_boundary.py.
+    _clear_fixture_rows(url)
+    _alembic("downgrade", "base")
+
+    # Stop at the Phase-01 head first. Reproducing the accepted Phase-01 catalog
+    # hash byte-for-byte proves Phase 02 did not renegotiate that contract.
+    _alembic("upgrade", PHASE_01_HEAD)
+    phase01 = _snapshot(url, PHASE_01_HEAD)
+    phase01_hash = _catalog_hash(phase01)
+    if phase01_hash != EXPECTED_CATALOG_SHA256:
+        raise AssertionError(
+            f"catalog differs from the exact Phase-01 schema contract: actual={phase01_hash}"
+        )
+
     _alembic("upgrade", "head")
-    first = _snapshot(url)
-    if _catalog_hash(first) != EXPECTED_CATALOG_SHA256:
-        raise AssertionError("catalog differs from the exact Phase-01 schema contract")
+    first = _snapshot(url, PHASE_02_HEAD)
+    first_agent = _agent_snapshot(url)
+    if _without_head(first) != _without_head(phase01):
+        raise AssertionError("Phase 02 mutated the Phase-01 public catalog")
+    first_agent_hash = _catalog_hash(first_agent)
+    if first_agent_hash != EXPECTED_AGENT_CATALOG_SHA256:
+        raise AssertionError(
+            f"agent catalog differs from the Phase-02 schema contract: actual={first_agent_hash}"
+        )
+
     _alembic("upgrade", "head")
-    second = _snapshot(url)
-    if first != second:
+    if (_snapshot(url, PHASE_02_HEAD), _agent_snapshot(url)) != (first, first_agent):
         raise AssertionError("second upgrade produced catalog drift")
+
     _alembic("downgrade", "base")
     _alembic("upgrade", "head")
-    recovered = _snapshot(url)
-    if first != recovered:
+    if (_snapshot(url, PHASE_02_HEAD), _agent_snapshot(url)) != (first, first_agent):
         raise AssertionError("downgrade/upgrade recovery produced catalog drift")
-    print("migration-check: 0001_foundation, no drift, RLS/grants verified")
+
+    print(
+        f"migration-check: {PHASE_01_HEAD} -> {PHASE_02_HEAD}, no drift, "
+        "Phase-01 public catalog unchanged, agent RLS/grants verified"
+    )
 
 
 if __name__ == "__main__":

@@ -1,0 +1,59 @@
+{
+  "description": "Fixed StreamEvent v1 contract fixture. event_id values are the derived uuid5 of (operation_id, sequence) and must not be chosen freely.",
+  "operation_id": "b0000000-0000-0000-0000-000000000001",
+  "registered_types": [
+    "operation.started",
+    "operation.state_changed",
+    "message.delta",
+    "message.completed",
+    "operation.failed",
+    "stream.completed"
+  ],
+  "registered_lifecycle_states": [
+    "RECEIVED",
+    "RUNNING",
+    "WAITING",
+    "COMPLETED",
+    "FAILED",
+    "CANCELLED"
+  ],
+  "valid_event": {
+    "version": "1",
+    "event_id": "95d9b569-9417-5e22-bd1a-9227c0ee8328",
+    "sequence": 2,
+    "operation_id": "b0000000-0000-0000-0000-000000000001",
+    "type": "operation.state_changed",
+    "data": {"state": "RUNNING", "reason_code": "NODE_ADVANCED"},
+    "emitted_at": "2026-01-15T10:00:00Z"
+  },
+  "rejected_events": {
+    "unregistered_type": {"type": "robot.animate"},
+    "model_authored_type": {"type": "operation.approved"},
+    "arbitrary_lifecycle_state": {
+      "type": "operation.state_changed",
+      "data": {"state": "APPROVED"}
+    },
+    "animation_field_in_data": {
+      "type": "operation.state_changed",
+      "data": {"state": "RUNNING", "animation": "robot_wave"}
+    },
+    "asset_field_in_data": {
+      "type": "operation.state_changed",
+      "data": {"state": "RUNNING", "asset_url": "https://cdn.example.invalid/robot.glb"}
+    },
+    "css_field_in_data": {
+      "type": "message.completed",
+      "data": {
+        "message_id": "c0000000-0000-0000-0000-000000000002",
+        "text": "done",
+        "css_class": "robot--smiling"
+      }
+    },
+    "unregistered_reason_code": {
+      "type": "operation.state_changed",
+      "data": {"state": "RUNNING", "reason_code": "APPROVED_BY_MODEL"}
+    },
+    "forged_event_id": {"event_id": "ffffffff-ffff-4fff-8fff-ffffffffffff"},
+    "zero_sequence": {"sequence": 0}
+  }
+}

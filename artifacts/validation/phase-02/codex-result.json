@@ -530,7 +530,7 @@
     {
       "path": "artifacts/validation/phase-02/human-uat.md",
       "purpose": "exact human UAT instructions, pending Nikola",
-      "sha256": "f53cf9db833876b0e037116070e2036cedaf6412b251dc690cc0a913b7b0ab0b"
+      "sha256": "764d481fde3c80edc4a9a4f71951886a750021f3dcb6f056655ec9fe0ebf232c"
     },
     {
       "path": "artifacts/validation/phase-02/migration-check.log",

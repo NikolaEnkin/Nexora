@@ -501,7 +501,7 @@
     {
       "path": "artifacts/validation/phase-02/REVIEW.md",
       "purpose": "phase review summary, amendments, findings and dispositions",
-      "sha256": "578a3ce3168f038cd518a4c6c6a8437ba987b5827e68b973dcaaa0623d2e52c8"
+      "sha256": "73353e119a93322dcb8694d787dda2da50f5311b65302a51a383ae777bb8ff1f"
     },
     {
       "path": "artifacts/validation/phase-02/automated-tests.log",
@@ -530,7 +530,7 @@
     {
       "path": "artifacts/validation/phase-02/human-uat.md",
       "purpose": "exact human UAT instructions, pending Nikola",
-      "sha256": "0881d18c1c0b3ca8554d8df46914070d64eb86cf393b0507487590758973ab11"
+      "sha256": "f53cf9db833876b0e037116070e2036cedaf6412b251dc690cc0a913b7b0ab0b"
     },
     {
       "path": "artifacts/validation/phase-02/migration-check.log",
@@ -597,6 +597,11 @@
       "summary": "langsmith arrives transitively via langchain-core and is network-capable; it is unused and the test suite blocks every non-loopback socket",
       "owner": "Nikola",
       "target": "Phase 03"
+    },
+    {
+      "summary": "LangGraph warns that deserializing the unregistered AgentState enums and AgentMessage from a checkpoint will be blocked in a future version; restore works today but a langgraph-checkpoint upgrade will require allowed_msgpack_modules registration",
+      "owner": "Nikola",
+      "target": "Phase 03, or whenever langgraph-checkpoint is upgraded"
     }
   ]
 }

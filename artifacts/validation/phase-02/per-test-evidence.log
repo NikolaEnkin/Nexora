@@ -1,0 +1,49 @@
+Phase 02 per-test evidence. Each command is the exact string in tests/manifest.yaml.
+
+=== P02-001 ===
+$ pytest -q backend/tests/contract/agent/test_agent_state.py::test_v1_roundtrip_and_unknown_major_rejection
+.                                                                        [100%]
+1 passed in 0.07s
+EXIT=0
+
+=== P02-002 ===
+$ pytest -q backend/tests/unit/agent/test_routes.py::test_fixed_intents_follow_documented_nodes
+.                                                                        [100%]
+1 passed in 0.23s
+EXIT=0
+
+=== P02-003 ===
+$ pytest -q backend/tests/integration/agent/test_checkpoint.py::test_checkpoint_restores_exact_state_sequence
+.                                                                        [100%]
+1 passed in 0.61s
+EXIT=0
+
+=== P02-004 ===
+$ pytest -q backend/tests/integration/agent/test_recovery.py::test_crash_after_checkpoint_resumes_once
+.                                                                        [100%]
+1 passed in 0.57s
+EXIT=0
+
+=== P02-005 ===
+$ pytest -q backend/tests/contract/agent/test_sse.py::test_sequence_and_reconnect_are_exact
+.                                                                        [100%]
+1 passed in 0.52s
+EXIT=0
+
+=== P02-006 ===
+$ pytest -q backend/tests/security/agent/test_thread_isolation.py::test_guessed_operation_is_non_disclosing
+.                                                                        [100%]
+1 passed in 0.61s
+EXIT=0
+
+=== P02-007 ===
+$ pytest -q backend/tests/security/agent/test_trace_redaction.py::test_secret_is_protected_in_checkpoint_trace_and_log
+.                                                                        [100%]
+1 passed in 0.58s
+EXIT=0
+
+=== P02-008 ===
+$ pytest -q backend/tests/security/agent/test_no_tools.py::test_prompt_cannot_expose_or_call_business_tool
+.                                                                        [100%]
+1 passed in 0.07s
+EXIT=0

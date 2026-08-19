@@ -101,7 +101,8 @@ def build_agent_composition(
     """Assemble the runtime from configuration."""
     session_factory = sessions or build_session_factory(build_engine(settings.database_url))
     operations = OperationRepository(sessions=session_factory)
-    events = EventLedger(sessions=session_factory)
+    checkpoint_cipher = cipher or AesGcmCheckpointCipher.from_settings(settings)
+    events = EventLedger(sessions=session_factory, cipher=checkpoint_cipher)
     trace = DeterministicTraceSink(
         secret_values=(
             settings.session_hash_pepper.get_secret_value(),
@@ -116,7 +117,7 @@ def build_agent_composition(
         operations=operations,
         events=events,
         model=model or DeterministicModelAdapter(settings),
-        cipher=cipher or AesGcmCheckpointCipher.from_settings(settings),
+        cipher=checkpoint_cipher,
         clock=clock,
     )
     scheduler = RuntimeScheduler(

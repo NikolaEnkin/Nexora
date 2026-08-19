@@ -28,7 +28,6 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 UUID = postgresql.UUID(as_uuid=True)
-JSONB = postgresql.JSONB(astext_type=sa.Text())
 
 SCHEMA = "nexora_agent"
 
@@ -165,8 +164,15 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("sequence", sa.BigInteger(), nullable=False),
+        # `type` and `sequence` stay in the clear: ordering, the type CHECK and the
+        # terminal-once index all depend on them, and neither carries user content.
         sa.Column("type", sa.String(40), nullable=False),
-        sa.Column("data", JSONB, nullable=False),
+        # The payload does carry user message text, so it is sealed exactly like a
+        # checkpoint. Storing it as plaintext JSONB would have left the same
+        # content readable at rest that `agent_checkpoints` deliberately encrypts.
+        sa.Column("key_id", sa.String(64), nullable=False),
+        sa.Column("data_nonce", postgresql.BYTEA(), nullable=False),
+        sa.Column("data_ciphertext", postgresql.BYTEA(), nullable=False),
         sa.Column("contract_version", sa.SmallInteger(), nullable=False),
         sa.Column("emitted_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),

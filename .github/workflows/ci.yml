@@ -1,9 +1,9 @@
-name: phase-01-foundation
+name: nexora-validation
 
 on:
   pull_request:
   push:
-    branches: [main, "phase/01-foundations"]
+    branches: [main, "phase/01-foundations", "phase/02-agent-runtime"]
 
 permissions:
   contents: read
@@ -28,7 +28,13 @@ jobs:
         run: make db-migrate-check
       - name: Unit and contract tests
         run: make test-unit && make test-contract
+      - name: Integration tests
+        run: make test-integration
       - name: Security tests
         run: make test-security
+      # Both phases run the same complete suite. Phase 01 stays an explicit step so
+      # a Phase-02 change that breaks the foundation fails under its own name.
       - name: Complete Phase 01 suite
         run: make phase PHASE=01
+      - name: Complete Phase 02 suite
+        run: make phase PHASE=02

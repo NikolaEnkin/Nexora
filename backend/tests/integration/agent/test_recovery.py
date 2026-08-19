@@ -55,7 +55,10 @@ def _runtime(
     return AgentRuntime(
         sessions=sessions,
         operations=OperationRepository(sessions=sessions),
-        events=EventLedger(sessions=sessions),
+        events=EventLedger(
+            sessions=sessions,
+            cipher=AesGcmCheckpointCipher.from_settings(Settings(environment="test")),
+        ),
         model=DeterministicModelAdapter(settings),
         cipher=AesGcmCheckpointCipher.from_settings(settings),
         clock=lambda: FIXED_NOW,

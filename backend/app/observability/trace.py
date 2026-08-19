@@ -39,7 +39,7 @@ class DeterministicTraceSink:
     changing a single call site, but it opens no socket.
     """
 
-    secret_values: tuple[str, ...] = ()
+    secret_values: tuple[str, ...] = ()  # mutable after construction so a test can add one
     _spans: list[Span] = field(default_factory=list, init=False)
 
     def record(self, name: str, /, **fields: Any) -> Span:

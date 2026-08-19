@@ -5,7 +5,7 @@ PYTEST := .venv/bin/pytest
 ALEMBIC := .venv/bin/alembic
 COMPOSE := docker compose -f infra/compose.yaml
 
-.PHONY: bootstrap services-up services-down lint format format-check typecheck db-migrate db-migrate-check test-unit test-contract test-security phase run
+.PHONY: bootstrap services-up services-down lint format format-check typecheck db-migrate db-migrate-check test-unit test-contract test-integration test-security phase run
 
 bootstrap:
 	@test -d .venv || python3 -m venv .venv
@@ -41,11 +41,16 @@ test-unit:
 test-contract:
 	@$(PYTEST) -q -m contract
 
+test-integration: db-migrate
+	@$(PYTEST) -q -m integration
+
 test-security: db-migrate
 	@$(PYTEST) -q -m security
 
+# Phase 02 runs the same complete suite as Phase 01: the Phase-01 tests are the
+# regression gate, so neither phase may select only its own tests.
 phase:
-	@test "$(PHASE)" = "01" || (echo "PHASE must be exactly 01" >&2; exit 2)
+	@test "$(PHASE)" = "01" -o "$(PHASE)" = "02" || (echo "PHASE must be 01 or 02" >&2; exit 2)
 	@$(MAKE) db-migrate
 	@$(PYTEST) -q
 

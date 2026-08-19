@@ -32,11 +32,13 @@ from app.agent.contracts import (
     StreamCompletedData,
     StreamEventType,
 )
+from app.agent.crypto import AesGcmCheckpointCipher
 from app.agent.errors import OperationNotFound
 from app.agent.events import EventLedger
 from app.agent.identity import derive_event_id
 from app.agent.operations import OperationRepository
 from app.agent.state import OperationState, ReasonCode
+from app.config import Settings
 from app.db import set_request_context
 
 CONCURRENT_WRITERS = 10
@@ -48,7 +50,9 @@ def ledger() -> tuple[EventLedger, OperationRepository]:
     seed_both_tenants(admin)
     reset_agent_data(admin)
     sessions = runtime_sessions(pool_size=CONCURRENT_WRITERS + 2)
-    return EventLedger(sessions=sessions), OperationRepository(sessions=sessions)
+    return EventLedger(
+        sessions=sessions, cipher=AesGcmCheckpointCipher.from_settings(Settings(environment="test"))
+    ), OperationRepository(sessions=sessions)
 
 
 @pytest.mark.integration

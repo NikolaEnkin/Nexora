@@ -1,0 +1,35 @@
+$ make db-migrate-check
+ Container nexora-foundation-redis-1 Running 
+ Container nexora-foundation-postgres-1 Running 
+ Container nexora-foundation-postgres-1 Waiting 
+ Container nexora-foundation-redis-1 Waiting 
+ Container nexora-foundation-redis-1 Healthy 
+ Container nexora-foundation-postgres-1 Healthy 
+$ .venv/bin/alembic -c backend/alembic.ini downgrade base
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running downgrade 0002_langgraph_checkpoint -> 0001_foundation, Create the Phase-02 agent runtime coordination storage.
+INFO  [alembic.runtime.migration] Running downgrade 0001_foundation -> , Create Phase-01 authoritative foundation.
+$ .venv/bin/alembic -c backend/alembic.ini upgrade 0001_foundation
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_foundation, Create Phase-01 authoritative foundation.
+$ .venv/bin/alembic -c backend/alembic.ini upgrade head
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade 0001_foundation -> 0002_langgraph_checkpoint, Create the Phase-02 agent runtime coordination storage.
+$ .venv/bin/alembic -c backend/alembic.ini upgrade head
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+$ .venv/bin/alembic -c backend/alembic.ini downgrade base
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running downgrade 0002_langgraph_checkpoint -> 0001_foundation, Create the Phase-02 agent runtime coordination storage.
+INFO  [alembic.runtime.migration] Running downgrade 0001_foundation -> , Create Phase-01 authoritative foundation.
+$ .venv/bin/alembic -c backend/alembic.ini upgrade head
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_foundation, Create Phase-01 authoritative foundation.
+INFO  [alembic.runtime.migration] Running upgrade 0001_foundation -> 0002_langgraph_checkpoint, Create the Phase-02 agent runtime coordination storage.
+migration-check: 0001_foundation -> 0002_langgraph_checkpoint, no drift, Phase-01 public catalog unchanged, agent RLS/grants verified
+EXIT=0

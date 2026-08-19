@@ -120,6 +120,15 @@ def checkpoint_aad(
     ).encode()
 
 
+def event_aad(
+    *, tenant_id: str, actor_id: str, operation_id: str, sequence: int, event_type: str
+) -> bytes:
+    """Bind a sealed event payload to exactly one operation slot and type."""
+    return "|".join(
+        ("nexora-event-v1", tenant_id, actor_id, operation_id, str(sequence), event_type)
+    ).encode()
+
+
 def write_aad(
     *,
     tenant_id: str,

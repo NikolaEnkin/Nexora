@@ -1,0 +1,14 @@
+{
+  "description": "P03-003. An R2 write attempted before any approval decision exists.",
+  "action_type": "client_create",
+  "target_type": "client",
+  "target_id": "40000000-0000-0000-0000-000000000001",
+  "normalized_arguments": {"name": "Example GmbH"},
+  "idempotency_key": "fixture-client-1",
+  "expected": {
+    "error_code": "APPROVAL_REQUIRED",
+    "approval_status": "PENDING",
+    "protected_effect_count": 0,
+    "durable_requests": 1
+  }
+}

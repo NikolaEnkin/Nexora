@@ -72,7 +72,11 @@ def test_controlled_provisioning_and_foundation_invariants() -> None:
         )
     with sessions() as session, session.begin():
         set_request_context(session, TENANT_A, ACTOR_A)
+        # Phase 03 (amendment A-6, finding F-01) adds DEPUTY to provisioning, so a
+        # tenant created after migration 0003 has somebody who may approve. The
+        # assertion stays exact — extended, never relaxed.
         assert session.execute(text("SELECT name FROM roles ORDER BY name")).scalars().all() == [
+            "DEPUTY",
             "OPERATOR",
             "OWNER",
             "VIEWER",
@@ -86,7 +90,17 @@ def test_controlled_provisioning_and_foundation_invariants() -> None:
                 ORDER BY roles.name, permissions.permission_key"""
             )
         ).all()
-        assert len(mappings) == 9
+        # 16 = OWNER 7 + OPERATOR 3 + VIEWER 2 + DEPUTY 4 (amendment A-6).
+        assert len(mappings) == 16
+        by_role: dict[str, set[str]] = {}
+        for role_name, permission_key in mappings:
+            by_role.setdefault(role_name, set()).add(permission_key)
+        # DEPUTY carries approval authority and nothing administrative (ADR-004 §2).
+        assert "approval.decide.high" in by_role["DEPUTY"]
+        assert "tenant.manage" not in by_role["DEPUTY"]
+        assert "membership.manage" not in by_role["DEPUTY"]
+        # A VIEWER may still approve nothing.
+        assert not any(key.startswith("approval.") for key in by_role["VIEWER"])
         for table in (
             "foundation_mutations",
             "domain_events",

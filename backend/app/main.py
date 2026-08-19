@@ -3,6 +3,8 @@ from uuid import UUID, uuid4
 from fastapi import FastAPI, Request
 
 from app.agent.wiring import AgentComposition, build_agent_composition
+from app.api.approvals import ApprovalApiDependencies
+from app.api.approvals import router as approvals_router
 from app.api.chat import router as chat_router
 from app.api.health import ReadinessPort
 from app.api.health import router as health_router
@@ -33,6 +35,8 @@ def create_app(
     *,
     agent: AgentComposition | None = None,
     enable_chat: bool = True,
+    approvals: ApprovalApiDependencies | None = None,
+    enable_approvals: bool = True,
 ) -> FastAPI:
     active_settings = settings or get_settings()
     configure_logging(
@@ -67,7 +71,22 @@ def create_app(
         app.state.chat = composition.dependencies
         app.include_router(chat_router)
 
+    # `/approvals` is feature-disabled independently of `/chat`, so the packet §17
+    # rollback ("disable protected execution") is a flag rather than a deploy.
+    if enable_approvals:
+        composed = approvals or _default_approvals(active_settings)
+        app.state.approvals = composed
+        app.include_router(approvals_router)
+
     return app
+
+
+def _default_approvals(settings: Settings) -> ApprovalApiDependencies:
+    from app.approvals.wiring import build_approval_service
+    from app.db import build_engine, build_session_factory
+
+    sessions = build_session_factory(build_engine(settings.database_url))
+    return ApprovalApiDependencies(service=build_approval_service(sessions))
 
 
 app = create_app()

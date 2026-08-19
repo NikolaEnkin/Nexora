@@ -1,0 +1,34 @@
+# P03-007. Boundary cases, each asserting zero protected effect.
+description: expired, revoked and wrong-approver approvals execute nothing
+frozen_now: "2026-01-15T10:00:00Z"
+cases:
+  - name: expired
+    action_type: client_create
+    idempotency_key: expired-1
+    advance_minutes: 61          # R2 TTL is 1 hour
+    expected_error: APPROVAL_EXPIRED
+    expected_status: EXPIRED
+    protected_effect_count: 0
+  - name: revoked
+    action_type: client_create
+    idempotency_key: revoked-1
+    revoke_before_execute: true
+    expected_error: APPROVAL_REVOKED
+    expected_status: REVOKED
+    protected_effect_count: 0
+  - name: wrong_approver
+    action_type: client_create
+    idempotency_key: wrong-approver-1
+    approver: viewer            # holds no approval.decide permission
+    expected_error: APPROVAL_NOT_AUTHORIZED
+    expected_status: PENDING
+    protected_effect_count: 0
+  - name: partial_composition_at_expiry
+    action_type: invoice_issue
+    idempotency_key: partial-expiry-1
+    amount: "50000.00"
+    approvers: [operator-2]      # one of the three path-5 slots
+    advance_minutes: 121         # path-5 TTL is 2 hours
+    expected_error: APPROVAL_EXPIRED
+    expected_status: EXPIRED
+    protected_effect_count: 0

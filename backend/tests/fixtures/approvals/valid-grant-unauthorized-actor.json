@@ -1,0 +1,18 @@
+{
+  "description": "P03-002. A grant that would be valid, held by an actor lacking the business permission.",
+  "action_type": "invoice_issue",
+  "target_type": "invoice",
+  "target_id": "40000000-0000-0000-0000-000000000001",
+  "normalized_arguments": {"amount": "500.00", "currency": "EUR", "invoice_id": "40000000-0000-0000-0000-000000000001"},
+  "idempotency_key": "unauthorized-1",
+  "actor": {
+    "roles": ["OPERATOR"],
+    "permissions": ["approval.decide"],
+    "missing_permission": "invoice.issue"
+  },
+  "expected": {
+    "error_code": "AUTHORIZATION_DENIED",
+    "protected_effect_count": 0,
+    "approval_requests_created": 0
+  }
+}

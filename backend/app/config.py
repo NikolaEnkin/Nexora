@@ -29,6 +29,11 @@ class Settings(BaseSettings):
         "postgresql+psycopg://nexora_runtime:local-runtime-only@127.0.0.1:54329/nexora"
     )
     redis_url: str = "redis://127.0.0.1:63799/0"
+    # Same-origin check for state-changing requests (ADR-001). The production
+    # guard lives in `app.api.auth`, not here: adding another required field to
+    # this validator would change which error the Phase-01 production-boundary
+    # test observes — the defect recorded as Phase-02 finding R-04.
+    allowed_origin: str = "http://127.0.0.1:8091"
     session_hash_pepper: SecretStr = SecretStr("local-session-pepper-change-me")
     rls_context_secret: SecretStr = SecretStr("local-rls-context-secret-change-me")
     # Base64 of exactly 32 bytes. Reached only through CheckpointCipherPort so the

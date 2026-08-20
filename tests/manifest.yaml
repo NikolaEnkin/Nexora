@@ -391,6 +391,54 @@ tests:
     owner: Nikola
     evidence_path: "artifacts/validation/phase-03/security-tests.log"
 
+  - id: P04-AUTH-001
+    phase: "04"
+    requirement_ids: [ARCH-005, ARCH-014]
+    level: integration
+    type: security
+    command: "pytest -q backend/tests/security/auth/test_session_boundary.py"
+    fixture: "backend/tests/integration/approvals/support.py"
+    preconditions: ["HD-001/002 accepted", "seeded tenant with roles"]
+    input: "requests with no cookie, a forged cookie, a revoked session, and a valid session"
+    expected_result: "absent, forged, expired and revoked are one indistinguishable 401"
+    expected_state: "roles and permissions resolved from PostgreSQL on every request"
+    expected_side_effect: "session row create/revoke only"
+    negative_assertion: ["no claim in the cookie", "no role from the request body", "no detail in the 401"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-04/security-tests.log"
+
+  - id: P04-AUTH-002
+    phase: "04"
+    requirement_ids: [ARCH-005]
+    level: integration
+    type: security
+    command: "pytest -q backend/tests/security/auth/test_session_boundary.py -k csrf_or_origin"
+    fixture: "backend/tests/integration/approvals/support.py"
+    preconditions: ["valid session"]
+    input: "state-changing request without a CSRF token, and one from a foreign origin"
+    expected_result: "CSRF_FAILED 403 in both cases; the correct pair reaches the endpoint"
+    expected_state: "no mutation reached any endpoint"
+    expected_side_effect: "none"
+    negative_assertion: ["no protected execution", "GET never requires a token"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-04/security-tests.log"
+
+  - id: P04-AUTH-003
+    phase: "04"
+    requirement_ids: [ARCH-014, ARCH-015]
+    level: unit
+    type: security
+    command: "pytest -q backend/tests/security/auth/test_session_boundary.py -k production"
+    fixture: "none"
+    preconditions: ["production-like settings"]
+    input: "development login under production configuration; loopback and non-https production origins"
+    expected_result: "404 for the login; construction refuses an unusable production origin"
+    expected_state: "no session minted"
+    expected_side_effect: "none"
+    negative_assertion: ["dev login unreachable in production", "origin check cannot be defeated by configuration"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-04/security-tests.log"
+
   - id: P04-001
     phase: "04"
     requirement_ids: [ARCH-008, ARCH-013]

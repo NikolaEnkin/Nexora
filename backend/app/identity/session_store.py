@@ -26,6 +26,23 @@ class SessionCredentials:
     absolute_expires_at: datetime
 
 
+@dataclass(frozen=True, slots=True)
+class ResolvedSession:
+    """A resolved session plus the stored CSRF hash.
+
+    `validate_csrf_and_origin` needs the stored hash, and `resolve` already reads
+    it but does not return it. Phase 04 adds this rather than changing `resolve`,
+    whose exact signature and behaviour Phase-01 tests assert (amendment A-1:
+    additive only).
+
+    The hash never leaves the server and is not part of `ActorContext`, so it
+    cannot travel into a trace, an audit payload or a stream event.
+    """
+
+    actor: ActorContext
+    csrf_hash: str = field(repr=False)
+
+
 @dataclass(slots=True)
 class PostgresSessionStore:
     sessions: sessionmaker[Session]
@@ -135,6 +152,31 @@ class PostgresSessionStore:
                 permissions=tuple(sorted({permission for _role, permission in role_rows})),
                 correlation_id=correlation_id,
             )
+
+    def resolve_credentials(
+        self, raw_token: str, correlation_id: UUID, now: datetime
+    ) -> ResolvedSession:
+        """Resolve a session and return the stored CSRF hash with it.
+
+        Deliberately a thin wrapper over `resolve` plus one scoped read rather
+        than a second copy of the resolution logic: expiry, revocation, role
+        loading and the idle refresh must have exactly one implementation, or the
+        two would drift and the weaker one would become the real boundary.
+        """
+        actor = self.resolve(raw_token, correlation_id, now)
+        token_hash = hash_session_token(raw_token, self.pepper)
+        with self.sessions() as session, session.begin():
+            set_request_context(session, actor.tenant_id, actor.actor_id)
+            csrf_hash = session.execute(
+                text(
+                    """SELECT csrf_hash FROM auth_sessions
+                    WHERE token_hash = :token_hash AND status = 'ACTIVE'"""
+                ),
+                {"token_hash": token_hash},
+            ).scalar_one_or_none()
+        if csrf_hash is None:
+            raise AuthenticationRequired
+        return ResolvedSession(actor=actor, csrf_hash=str(csrf_hash))
 
     def revoke(self, raw_token: str, actor_id: UUID, now: datetime) -> None:
         token_hash = hash_session_token(raw_token, self.pepper)

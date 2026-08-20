@@ -5,6 +5,8 @@ from fastapi import FastAPI, Request
 from app.agent.wiring import AgentComposition, build_agent_composition
 from app.api.approvals import ApprovalApiDependencies
 from app.api.approvals import router as approvals_router
+from app.api.auth import AuthDependencies, SessionAuthenticationMiddleware
+from app.api.auth import router as auth_router
 from app.api.chat import router as chat_router
 from app.api.health import ReadinessPort
 from app.api.health import router as health_router
@@ -37,6 +39,8 @@ def create_app(
     enable_chat: bool = True,
     approvals: ApprovalApiDependencies | None = None,
     enable_approvals: bool = True,
+    auth: AuthDependencies | None = None,
+    enable_auth: bool = True,
 ) -> FastAPI:
     active_settings = settings or get_settings()
     configure_logging(
@@ -60,6 +64,15 @@ def create_app(
         response.headers["X-Correlation-ID"] = request.state.correlation_id
         return response
 
+    # The authentication boundary is installed before any router, so
+    # `request.state.actor` is either a trusted ActorContext or absent by the time
+    # an endpoint runs. Nothing downstream assembles an actor from a request body.
+    if enable_auth:
+        auth_dependencies = auth or _default_auth(active_settings)
+        app.state.auth = auth_dependencies
+        app.add_middleware(SessionAuthenticationMiddleware, dependencies=auth_dependencies)
+        app.include_router(auth_router)
+
     install_error_handlers(app)
     app.include_router(health_router)
 
@@ -79,6 +92,22 @@ def create_app(
         app.include_router(approvals_router)
 
     return app
+
+
+def _default_auth(settings: Settings) -> AuthDependencies:
+    from datetime import UTC, datetime
+
+    from app.db import build_engine, build_session_factory
+    from app.identity import PostgresSessionStore
+
+    sessions = build_session_factory(build_engine(settings.database_url))
+    return AuthDependencies(
+        store=PostgresSessionStore(
+            sessions=sessions, pepper=settings.session_hash_pepper.get_secret_value()
+        ),
+        settings=settings,
+        clock=lambda: datetime.now(UTC),
+    )
 
 
 def _default_approvals(settings: Settings) -> ApprovalApiDependencies:

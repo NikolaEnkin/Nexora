@@ -30,6 +30,7 @@ from app.approvals.audit import ApprovalAuditLog
 from app.approvals.composition import (
     ApprovalPath,
     ApproverDecision,
+    execution_ttl,
     parse_roles,
     satisfied_path,
 )
@@ -74,6 +75,22 @@ def _path_registry() -> dict[int, ApprovalPath]:
         ):
             _PATHS_BY_ID[path.path_id] = path
     return _PATHS_BY_ID
+
+
+def applicable_deadline(request: ApprovalRequest) -> datetime:
+    """The deadline that currently governs this approval — `ADR-004` §3 as amended.
+
+    Two windows, one at a time. Before the composition is satisfied the deadline is
+    the collection window stored in `expires_at`. The moment it is satisfied,
+    `approved_at` is stamped and the deadline becomes the short execution window.
+
+    The switch is what makes collecting three signatures cheap and staying loaded
+    expensive: a request approved on minute 5 of an eight-hour collection window
+    closes on minute 15, not minute 480.
+    """
+    if request.approved_at is None:
+        return request.expires_at
+    return request.approved_at + execution_ttl(request.risk)
 
 
 def may_decide(actor: ActorContext, risk: RiskLevel) -> bool:
@@ -325,7 +342,7 @@ class ApprovalService:
             payload_hash=request.payload_hash,
             satisfied_path_id=request.satisfied_path_id or 0,
             granted_at=request.updated_at,
-            expires_at=request.expires_at,
+            expires_at=applicable_deadline(request),
             required_assurance=request.required_assurance,
             single_use_key=f"{request.approval_id}:{request.payload_hash}",
         )
@@ -401,7 +418,7 @@ class ApprovalService:
         self, actor: ActorContext, request: ApprovalRequest, now: datetime
     ) -> ApprovalRequest:
         """Server clock only. A client-supplied time never extends an approval."""
-        if request.status in TERMINAL_STATUSES or now < request.expires_at:
+        if request.status in TERMINAL_STATUSES or now < applicable_deadline(request):
             return request
         closed = self.repository.set_status(
             actor=actor,

@@ -25,7 +25,7 @@ from uuid import UUID
 
 from app.approvals.audit import ApprovalAuditLog
 from app.approvals.composition import (
-    approval_ttl,
+    collection_ttl,
     is_at_or_above_threshold,
     parse_roles,
     requester_kind,
@@ -141,7 +141,7 @@ class ProtectedActionGate:
     ) -> GateResult:
         entry = lookup(descriptor.action_type)
         assert entry is not None  # unclassified actions were denied above
-        expires_at = now + approval_ttl(
+        expires_at = now + collection_ttl(
             risk=decision.risk,
             requester=requester_kind(parse_roles(actor.roles)),
             at_or_above_threshold=is_at_or_above_threshold(entry, descriptor.normalized_arguments),

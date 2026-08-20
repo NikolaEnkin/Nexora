@@ -153,7 +153,7 @@ def test_a_decision_after_expiry_cannot_complete_a_composition() -> None:
     approval_id = UUID(pending.value.details["approval_id"])
     decide_all(harness, approval_id, digest, (operator(2),))
 
-    clock.advance(timedelta(minutes=121))
+    clock.advance(timedelta(minutes=481))
 
     with pytest.raises(ApprovalExpired):
         decide_all(harness, approval_id, digest, (operator(3), cfo()), key_prefix="late")
@@ -177,3 +177,113 @@ def test_a_guessed_approval_identifier_is_non_disclosing() -> None:
             idempotency_key="guess-1",
         )
     assert total_effects(engine) == 0
+
+
+def test_a_fully_approved_request_closes_on_the_short_execution_window() -> None:
+    """`ADR-004` §3 as amended — the case that motivated splitting the windows.
+
+    Three people approve within minutes of an eight-hour collection window. Under
+    the superseded single-TTL model the action stayed loaded for the remaining ~7.9
+    hours. It must now close ten minutes after the last decision.
+    """
+    clock = MutableClock()
+    harness = build_harness(clock=clock)
+    engine = harness._engine
+    assert engine is not None
+    requester = operator(1)
+    descriptor = invoice_issue_descriptor(amount="50000.00", key="fast-approval")
+    digest = payload_hash(descriptor.normalized_arguments)
+
+    with pytest.raises(ApprovalRequired) as pending:
+        harness.gate.execute(actor=requester, descriptor=descriptor)
+    approval_id = UUID(pending.value.details["approval_id"])
+
+    # All three path-5 slots filled inside the first ten minutes.
+    clock.advance(timedelta(minutes=5))
+    decide_all(harness, approval_id, digest, (operator(2), operator(3), cfo()))
+    assert approval_status(engine, approval_id) == ApprovalStatus.APPROVED.value
+
+    # Nine minutes after the last decision it is still usable.
+    clock.advance(timedelta(minutes=9))
+    result = harness.gate.execute(actor=requester, descriptor=descriptor)
+    assert result.outcome.value == "EXECUTED"
+    assert total_effects(engine) == 1
+
+
+def test_an_approved_request_expires_ten_minutes_after_the_last_decision() -> None:
+    """The other side of the same rule: minute 11 is too late, despite ~7.8 hours
+    remaining on the collection window."""
+    clock = MutableClock()
+    harness = build_harness(clock=clock)
+    engine = harness._engine
+    assert engine is not None
+    requester = operator(1)
+    descriptor = invoice_issue_descriptor(amount="50000.00", key="loaded-too-long")
+    digest = payload_hash(descriptor.normalized_arguments)
+
+    with pytest.raises(ApprovalRequired) as pending:
+        harness.gate.execute(actor=requester, descriptor=descriptor)
+    approval_id = UUID(pending.value.details["approval_id"])
+
+    clock.advance(timedelta(minutes=5))
+    decide_all(harness, approval_id, digest, (operator(2), operator(3), cfo()))
+
+    clock.advance(timedelta(minutes=11))
+    with pytest.raises(ApprovalExpired):
+        harness.gate.execute(actor=requester, descriptor=descriptor)
+    assert approval_status(engine, approval_id) == ApprovalStatus.EXPIRED.value
+    assert total_effects(engine) == 0
+
+
+def test_a_larger_amount_does_not_widen_the_execution_window() -> None:
+    """Amount changes how many people must agree, never how long the approval
+    stays loaded afterwards."""
+    for amount, key in (("500.00", "small-window"), ("2000000.00", "huge-window")):
+        clock = MutableClock()
+        harness = build_harness(clock=clock)
+        engine = harness._engine
+        assert engine is not None
+        requester = operator(1)
+        descriptor = invoice_issue_descriptor(amount=amount, key=key)
+        digest = payload_hash(descriptor.normalized_arguments)
+
+        with pytest.raises(ApprovalRequired) as pending:
+            harness.gate.execute(actor=requester, descriptor=descriptor)
+        approval_id = UUID(pending.value.details["approval_id"])
+        approvers = (cfo(),) if amount == "500.00" else (operator(2), operator(3), cfo())
+        decide_all(harness, approval_id, digest, approvers)
+
+        clock.advance(timedelta(minutes=11))
+        with pytest.raises(ApprovalExpired):
+            harness.gate.execute(actor=requester, descriptor=descriptor)
+        assert total_effects(engine) == 0, amount
+
+
+def test_the_collection_window_is_generous_enough_for_three_people() -> None:
+    """The friction case: two approvals already given must not be discarded because
+    the third person was in a meeting."""
+    clock = MutableClock()
+    harness = build_harness(clock=clock)
+    engine = harness._engine
+    assert engine is not None
+    requester = operator(1)
+    descriptor = invoice_issue_descriptor(amount="50000.00", key="slow-third-approver")
+    digest = payload_hash(descriptor.normalized_arguments)
+
+    with pytest.raises(ApprovalRequired) as pending:
+        harness.gate.execute(actor=requester, descriptor=descriptor)
+    approval_id = UUID(pending.value.details["approval_id"])
+
+    clock.advance(timedelta(minutes=40))
+    decide_all(harness, approval_id, digest, (operator(2),), key_prefix="first")
+    clock.advance(timedelta(minutes=110))
+    decide_all(harness, approval_id, digest, (operator(3),), key_prefix="second")
+    # Under the superseded two-hour TTL the request would already be dead here,
+    # discarding two decisions that had been given.
+    clock.advance(timedelta(minutes=15))
+    decide_all(harness, approval_id, digest, (cfo(),), key_prefix="third")
+
+    assert approval_status(engine, approval_id) == ApprovalStatus.APPROVED.value
+    result = harness.gate.execute(actor=requester, descriptor=descriptor)
+    assert result.outcome.value == "EXECUTED"
+    assert total_effects(engine) == 1

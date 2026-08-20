@@ -20,7 +20,8 @@ from app.approvals.composition import (
     PATH_R2,
     ApproverDecision,
     ApproverRole,
-    approval_ttl,
+    collection_ttl,
+    execution_ttl,
     is_at_or_above_threshold,
     open_paths,
     parse_roles,
@@ -354,17 +355,40 @@ def test_unknown_role_names_are_ignored_rather_than_trusted() -> None:
 @pytest.mark.parametrize(
     ("risk", "requester", "large", "expected"),
     [
-        (RiskLevel.R2, ApproverRole.OPERATOR, False, timedelta(hours=1)),
-        (RiskLevel.R3, ApproverRole.OWNER, True, timedelta(minutes=10)),
-        (RiskLevel.R3, ApproverRole.DEPUTY, True, timedelta(minutes=10)),
-        (RiskLevel.R3, ApproverRole.OPERATOR, False, timedelta(hours=1)),
-        (RiskLevel.R3, ApproverRole.OPERATOR, True, timedelta(hours=2)),
+        (RiskLevel.R2, ApproverRole.OPERATOR, False, timedelta(hours=4)),
+        (RiskLevel.R3, ApproverRole.OWNER, True, timedelta(minutes=15)),
+        (RiskLevel.R3, ApproverRole.DEPUTY, True, timedelta(minutes=15)),
+        (RiskLevel.R3, ApproverRole.OPERATOR, False, timedelta(hours=4)),
+        (RiskLevel.R3, ApproverRole.OPERATOR, True, timedelta(hours=8)),
     ],
 )
-def test_ttl_varies_with_the_required_decision_count(
+def test_the_collection_window_varies_with_the_required_decision_count(
     risk: RiskLevel, requester: ApproverRole, large: bool, expected: timedelta
 ) -> None:
-    assert approval_ttl(risk=risk, requester=requester, at_or_above_threshold=large) == expected
+    """`ADR-004` §3 as amended — more humans, more time to sign."""
+    assert collection_ttl(risk=risk, requester=requester, at_or_above_threshold=large) == expected
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("risk", "expected"),
+    [(RiskLevel.R2, timedelta(hours=1)), (RiskLevel.R3, timedelta(minutes=10))],
+)
+def test_the_execution_window_is_uniform_per_risk(risk: RiskLevel, expected: timedelta) -> None:
+    """It depends on neither amount nor path: collecting signatures buys time to
+    decide, never time to stay loaded."""
+    assert execution_ttl(risk) == expected
+
+
+@pytest.mark.unit
+def test_the_execution_window_never_exceeds_the_collection_window_for_r3() -> None:
+    """The exposure window is the short one in every R3 case, by construction."""
+    for requester in (ApproverRole.OWNER, ApproverRole.DEPUTY, ApproverRole.OPERATOR):
+        for large in (False, True):
+            collection = collection_ttl(
+                risk=RiskLevel.R3, requester=requester, at_or_above_threshold=large
+            )
+            assert execution_ttl(RiskLevel.R3) <= collection, (requester, large)
 
 
 @pytest.mark.unit

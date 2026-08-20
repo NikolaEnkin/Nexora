@@ -58,7 +58,7 @@ CURRENT_HEAD = PHASE_03_HEAD
 # Phase 03 changes the public catalog on purpose (amendment A-2). This pins the new
 # shape so an *unintended* further change is still caught.
 EXPECTED_PHASE_03_CATALOG_SHA256 = (
-    "a3bd8f260947aafd6c1479a3bf57aadc4c191303c651f71b1eebd48fda9df819"
+    "d0e6de8f5d09cab54127fcf1f71be710187298a80008e245e082aa1b9d3deeeb"
 )
 
 APPROVAL_TABLES = (

@@ -45,43 +45,48 @@ _INSERT_REQUEST = text(
         id, tenant_id, requester_id, operation_id, action_key, target_type, target_id,
         payload, payload_hash, risk, normalization_version, policy_version,
         catalogue_version, open_path_ids, required_assurance, status, satisfied_path_id,
-        idempotency_key, correlation_id, expires_at, created_at, updated_at, terminal_at
+        idempotency_key, correlation_id, expires_at, approved_at, created_at, updated_at,
+        terminal_at
     ) VALUES (
         :id, :tenant_id, :requester_id, :operation_id, :action_key, :target_type, :target_id,
         CAST(:payload AS jsonb), :payload_hash, :risk, :normalization_version, :policy_version,
         :catalogue_version, :open_path_ids, :required_assurance, 'PENDING', NULL,
-        :idempotency_key, :correlation_id, :expires_at, :now, :now, NULL
+        :idempotency_key, :correlation_id, :expires_at, NULL, :now, :now, NULL
     ) ON CONFLICT DO NOTHING
     RETURNING id, tenant_id, requester_id, operation_id, action_key, target_type,
               target_id, payload, payload_hash, risk, normalization_version, policy_version,
               catalogue_version, open_path_ids, required_assurance, status, satisfied_path_id,
-              expires_at, created_at, updated_at, terminal_at"""
+              expires_at, approved_at, created_at, updated_at, terminal_at"""
 )
 _SELECT_REQUEST = text(
     """SELECT id, tenant_id, requester_id, operation_id, action_key, target_type,
               target_id, payload, payload_hash, risk, normalization_version, policy_version,
               catalogue_version, open_path_ids, required_assurance, status, satisfied_path_id,
-              expires_at, created_at, updated_at, terminal_at
+              expires_at, approved_at, created_at, updated_at, terminal_at
     FROM approval_requests WHERE id = :id"""
 )
 _SELECT_REQUEST_FOR_UPDATE = text(
     """SELECT id, tenant_id, requester_id, operation_id, action_key, target_type,
               target_id, payload, payload_hash, risk, normalization_version, policy_version,
               catalogue_version, open_path_ids, required_assurance, status, satisfied_path_id,
-              expires_at, created_at, updated_at, terminal_at
+              expires_at, approved_at, created_at, updated_at, terminal_at
     FROM approval_requests WHERE id = :id FOR UPDATE"""
 )
 _UPDATE_STATUS = text(
     """UPDATE approval_requests
     SET status = :status,
         satisfied_path_id = COALESCE(:satisfied_path_id, satisfied_path_id),
+        approved_at = CASE
+            WHEN :is_approved AND approved_at IS NULL THEN :now
+            ELSE approved_at
+        END,
         terminal_at = CASE WHEN :is_terminal THEN :now ELSE terminal_at END,
         updated_at = :now
     WHERE id = :id
     RETURNING id, tenant_id, requester_id, operation_id, action_key, target_type,
               target_id, payload, payload_hash, risk, normalization_version, policy_version,
               catalogue_version, open_path_ids, required_assurance, status, satisfied_path_id,
-              expires_at, created_at, updated_at, terminal_at"""
+              expires_at, approved_at, created_at, updated_at, terminal_at"""
 )
 _INSERT_DECISION = text(
     """INSERT INTO approval_decisions (
@@ -158,6 +163,7 @@ def _to_request(row: RowMapping) -> ApprovalRequest:
         status=ApprovalStatus(row["status"]),
         satisfied_path_id=row["satisfied_path_id"],
         expires_at=row["expires_at"],
+        approved_at=row["approved_at"],
         created_at=row["created_at"],
         updated_at=row["updated_at"],
         terminal_at=row["terminal_at"],
@@ -243,6 +249,7 @@ class ApprovalRepository:
                         "id": approval_id,
                         "status": status.value,
                         "satisfied_path_id": satisfied_path_id,
+                        "is_approved": status is ApprovalStatus.APPROVED,
                         "is_terminal": status in TERMINAL_STATUSES,
                         "now": now,
                     },

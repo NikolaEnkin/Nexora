@@ -14,8 +14,8 @@ exit=0
  Container nexora-foundation-redis-1 Running 
  Container nexora-foundation-redis-1 Waiting 
  Container nexora-foundation-postgres-1 Waiting 
- Container nexora-foundation-postgres-1 Healthy 
  Container nexora-foundation-redis-1 Healthy 
+ Container nexora-foundation-postgres-1 Healthy 
 $ .venv/bin/alembic -c backend/alembic.ini downgrade base
 INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
 INFO  [alembic.runtime.migration] Will assume transactional DDL.
@@ -56,55 +56,55 @@ exit=0
  Container nexora-foundation-postgres-1 Running 
  Container nexora-foundation-redis-1 Waiting 
  Container nexora-foundation-postgres-1 Waiting 
- Container nexora-foundation-redis-1 Healthy 
  Container nexora-foundation-postgres-1 Healthy 
+ Container nexora-foundation-redis-1 Healthy 
 INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
 INFO  [alembic.runtime.migration] Will assume transactional DDL.
 ..........................................................               [100%]
-58 passed, 171 deselected in 12.31s
+58 passed, 178 deselected in 10.76s
 exit=0
 === make phase PHASE=01 ===
  Container nexora-foundation-postgres-1 Running 
  Container nexora-foundation-redis-1 Running 
- Container nexora-foundation-redis-1 Waiting 
  Container nexora-foundation-postgres-1 Waiting 
- Container nexora-foundation-redis-1 Healthy 
+ Container nexora-foundation-redis-1 Waiting 
  Container nexora-foundation-postgres-1 Healthy 
+ Container nexora-foundation-redis-1 Healthy 
 INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
 INFO  [alembic.runtime.migration] Will assume transactional DDL.
-........................................................................ [ 31%]
-........................................................................ [ 62%]
-........................................................................ [ 94%]
-.............                                                            [100%]
-229 passed in 24.49s
+........................................................................ [ 30%]
+........................................................................ [ 61%]
+........................................................................ [ 91%]
+....................                                                     [100%]
+236 passed in 22.00s
 exit=0
 === make phase PHASE=02 ===
  Container nexora-foundation-redis-1 Running 
  Container nexora-foundation-postgres-1 Running 
  Container nexora-foundation-redis-1 Waiting 
  Container nexora-foundation-postgres-1 Waiting 
- Container nexora-foundation-postgres-1 Healthy 
  Container nexora-foundation-redis-1 Healthy 
+ Container nexora-foundation-postgres-1 Healthy 
 INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
 INFO  [alembic.runtime.migration] Will assume transactional DDL.
-........................................................................ [ 31%]
-........................................................................ [ 62%]
-........................................................................ [ 94%]
-.............                                                            [100%]
-229 passed in 24.11s
+........................................................................ [ 30%]
+........................................................................ [ 61%]
+........................................................................ [ 91%]
+....................                                                     [100%]
+236 passed in 21.62s
 exit=0
 === make phase PHASE=03 ===
- Container nexora-foundation-redis-1 Running 
  Container nexora-foundation-postgres-1 Running 
- Container nexora-foundation-postgres-1 Waiting 
+ Container nexora-foundation-redis-1 Running 
  Container nexora-foundation-redis-1 Waiting 
- Container nexora-foundation-postgres-1 Healthy 
+ Container nexora-foundation-postgres-1 Waiting 
  Container nexora-foundation-redis-1 Healthy 
+ Container nexora-foundation-postgres-1 Healthy 
 INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
 INFO  [alembic.runtime.migration] Will assume transactional DDL.
-........................................................................ [ 31%]
-........................................................................ [ 62%]
-........................................................................ [ 94%]
-.............                                                            [100%]
-229 passed in 24.44s
+........................................................................ [ 30%]
+........................................................................ [ 61%]
+........................................................................ [ 91%]
+....................                                                     [100%]
+236 passed in 22.01s
 exit=0

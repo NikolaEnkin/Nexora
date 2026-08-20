@@ -76,7 +76,10 @@ class ApprovalRequest(FrozenContract):
     required_assurance: Assurance
     status: ApprovalStatus
     satisfied_path_id: int | None = None
+    # End of the collection window. Once `approved_at` is set, the applicable
+    # deadline becomes `approved_at + execution_ttl(risk)` instead.
     expires_at: datetime
+    approved_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
     terminal_at: datetime | None = None

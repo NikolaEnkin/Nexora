@@ -30,10 +30,12 @@ from uuid import UUID
 
 from app.policy.catalogue import (
     AMOUNT_THRESHOLD,
-    TTL_R2,
-    TTL_R3_SELF_APPROVABLE,
-    TTL_R3_SINGLE_OR_PAIR,
-    TTL_R3_THREE_PARTY,
+    COLLECTION_TTL_R2,
+    COLLECTION_TTL_R3_SELF_APPROVABLE,
+    COLLECTION_TTL_R3_SINGLE_OR_PAIR,
+    COLLECTION_TTL_R3_THREE_PARTY,
+    EXECUTION_TTL_R2,
+    EXECUTION_TTL_R3,
     CatalogueEntry,
 )
 from app.policy.contracts import Assurance, RiskLevel
@@ -166,28 +168,40 @@ def open_paths(
     return ()
 
 
-def approval_ttl(
+def collection_ttl(
     *,
     risk: RiskLevel,
     requester: ApproverRole | None,
     at_or_above_threshold: bool,
 ) -> timedelta:
-    """`ADR-004` §3.
+    """How long the required humans have to decide — `ADR-004` §3 as amended.
 
-    The ADR indexes TTL by path, but a TTL has to be fixed when the request is
-    created — before anyone has decided, so before the path is known. It is
-    therefore derived from what determines the open set: the requester's
-    authority and the amount. That derivation is stated here rather than hidden,
-    and `P03-UAT-01` puts it in front of Nikola.
+    Fixed when the request is created, so it is derived from what determines the
+    open path set: the requester's authority and the amount. Nothing can execute
+    during this window, so its length costs patience rather than exposure.
+
+    A self-approvable request gets the short window because the person who may
+    approve it is already at the keyboard. The three-party case gets a working
+    day, because the superseded two-hour window reliably expired *after two of
+    three people had already approved* — discarding human decisions already given.
     """
     if risk is RiskLevel.R2:
-        return TTL_R2
+        return COLLECTION_TTL_R2
     if requester in (ApproverRole.OWNER, ApproverRole.DEPUTY):
-        # Self-approval is open, so the window is the short one.
-        return TTL_R3_SELF_APPROVABLE
+        return COLLECTION_TTL_R3_SELF_APPROVABLE
     if at_or_above_threshold:
-        return TTL_R3_THREE_PARTY
-    return TTL_R3_SINGLE_OR_PAIR
+        return COLLECTION_TTL_R3_THREE_PARTY
+    return COLLECTION_TTL_R3_SINGLE_OR_PAIR
+
+
+def execution_ttl(risk: RiskLevel) -> timedelta:
+    """How long a fully approved action stays usable — `ADR-004` §3 as amended.
+
+    Uniform per risk level and independent of amount and path. This is the whole
+    exposure window, so neither a larger amount nor a longer collection widens it:
+    collecting three signatures buys time to decide, never time to stay loaded.
+    """
+    return EXECUTION_TTL_R3 if risk is RiskLevel.R3 else EXECUTION_TTL_R2
 
 
 def _qualifies(decision: ApproverDecision, slot: frozenset[ApproverRole]) -> bool:

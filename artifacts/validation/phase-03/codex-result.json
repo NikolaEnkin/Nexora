@@ -6,137 +6,628 @@
   "baseline_commit": "6387ed6e78c18d53d930bc3f265f2f8138990428",
   "commit": "56623910cab2063c60d38fd2bddd9cdb82f0a70f",
   "changed_files": [
-    {"path": "backend/app/policy/__init__.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/app/policy/canonical.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/app/policy/catalogue.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/app/policy/contracts.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/app/policy/errors.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/app/policy/evaluator.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/app/approvals/__init__.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/app/approvals/audit.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/app/approvals/composition.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/app/approvals/contracts.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/app/approvals/errors.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/app/approvals/gate.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/app/approvals/identity.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/app/approvals/repository.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/app/approvals/runtime.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/app/approvals/service.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/app/approvals/wiring.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/app/rate_limit/__init__.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/app/rate_limit/limiter.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/app/api/approvals.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/alembic/versions/0003_policy_approval.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/tests/unit/policy/test_payload_normalization.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/tests/unit/policy/test_catalogue.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/tests/unit/approvals/test_composition.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/tests/integration/approvals/support.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/tests/integration/approvals/test_gate.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/tests/contract/approvals/test_approval_api.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/tests/security/policy/test_authorization_first.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/tests/security/policy/test_rate_limit.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/tests/security/approvals/test_binding.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/tests/security/approvals/test_replay.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/tests/security/approvals/test_expiry_revocation.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/tests/security/approvals/test_approval_migration_boundary.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/tests/security/approvals/test_provisioned_tenant.py", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/tests/fixtures/policy/r1-read.yaml", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/tests/fixtures/policy/rate-burst-secret.json", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/tests/fixtures/approvals/r2-write.json", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/tests/fixtures/approvals/r2-approved-exact.json", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/tests/fixtures/approvals/valid-grant-unauthorized-actor.json", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/tests/fixtures/approvals/approved-then-edited.json", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/tests/fixtures/approvals/concurrent-replay.json", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/tests/fixtures/approvals/expired-revoked-wrong-actor.yaml", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "docs/execplans/phase-03.md", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "artifacts/validation/phase-03/REVIEW.md", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "artifacts/validation/phase-03/reviewer.md", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "artifacts/validation/phase-03/security-review.md", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "artifacts/validation/phase-03/test-audit.md", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "artifacts/validation/phase-03/code-attempts.md", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "artifacts/validation/phase-03/human-uat.md", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "artifacts/validation/phase-03/changed-files.txt", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "artifacts/validation/phase-03/phase-review.log", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "artifacts/validation/phase-03/migration-check.log", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "artifacts/validation/phase-03/automated-tests.log", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "artifacts/validation/phase-03/contract-tests.log", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "artifacts/validation/phase-03/security-tests.log", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "artifacts/validation/phase-03/per-test-evidence.log", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "artifacts/validation/phase-03/codex-result.json", "change": "created", "allowlist_category": "MAY_CREATE"},
-    {"path": "backend/app/agent/state.py", "change": "modified", "allowlist_category": "MAY_MODIFY"},
-    {"path": "backend/app/audit/redaction.py", "change": "modified", "allowlist_category": "MAY_MODIFY"},
-    {"path": "backend/app/main.py", "change": "modified", "allowlist_category": "MAY_MODIFY"},
-    {"path": "Makefile", "change": "modified", "allowlist_category": "MAY_MODIFY"},
-    {"path": "PHASE_STATUS.md", "change": "modified", "allowlist_category": "MAY_MODIFY"},
-    {"path": "scripts/codex/migration_check.py", "change": "modified", "allowlist_category": "MAY_MODIFY"},
-    {"path": "backend/tests/security/foundation/test_db_roles.py", "change": "modified", "allowlist_category": "MAY_MODIFY"},
-    {"path": "backend/app/identity/provisioning.py", "change": "modified", "allowlist_category": "MAY_MODIFY"},
-    {"path": "backend/tests/security/foundation/test_provisioning.py", "change": "modified", "allowlist_category": "MAY_MODIFY"}
+    {
+      "path": "backend/app/policy/__init__.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/policy/canonical.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/policy/catalogue.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/policy/contracts.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/policy/errors.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/policy/evaluator.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/approvals/__init__.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/approvals/audit.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/approvals/composition.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/approvals/contracts.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/approvals/errors.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/approvals/gate.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/approvals/identity.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/approvals/repository.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/approvals/runtime.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/approvals/service.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/approvals/wiring.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/rate_limit/__init__.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/rate_limit/limiter.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/api/approvals.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/alembic/versions/0003_policy_approval.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/unit/policy/test_payload_normalization.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/unit/policy/test_catalogue.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/unit/approvals/test_composition.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/integration/approvals/support.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/integration/approvals/test_gate.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/contract/approvals/test_approval_api.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/security/policy/test_authorization_first.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/security/policy/test_rate_limit.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/security/approvals/test_binding.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/security/approvals/test_replay.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/security/approvals/test_expiry_revocation.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/security/approvals/test_approval_migration_boundary.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/security/approvals/test_provisioned_tenant.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/fixtures/policy/r1-read.yaml",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/fixtures/policy/rate-burst-secret.json",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/fixtures/approvals/r2-write.json",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/fixtures/approvals/r2-approved-exact.json",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/fixtures/approvals/valid-grant-unauthorized-actor.json",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/fixtures/approvals/approved-then-edited.json",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/fixtures/approvals/concurrent-replay.json",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/fixtures/approvals/expired-revoked-wrong-actor.yaml",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "docs/execplans/phase-03.md",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-03/REVIEW.md",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-03/reviewer.md",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-03/security-review.md",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-03/test-audit.md",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-03/code-attempts.md",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-03/human-uat.md",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-03/changed-files.txt",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-03/phase-review.log",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-03/migration-check.log",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-03/automated-tests.log",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-03/contract-tests.log",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-03/security-tests.log",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-03/per-test-evidence.log",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-03/codex-result.json",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/agent/state.py",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "backend/app/audit/redaction.py",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "backend/app/main.py",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "Makefile",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "PHASE_STATUS.md",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "scripts/codex/migration_check.py",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "backend/tests/security/foundation/test_db_roles.py",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "backend/app/identity/provisioning.py",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "backend/tests/security/foundation/test_provisioning.py",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "docs/adr/ADR-004-policy-and-approval.md",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    }
   ],
   "commands": [
-    {"command": "git status --short", "attempt": 1, "exit_code": 0, "evidence_path": "artifacts/validation/phase-03/phase-review.log"},
-    {"command": "git diff --check", "attempt": 1, "exit_code": 0, "evidence_path": "artifacts/validation/phase-03/phase-review.log"},
-    {"command": "make lint", "attempt": 3, "exit_code": 0, "evidence_path": "artifacts/validation/phase-03/phase-review.log"},
-    {"command": "make format-check", "attempt": 2, "exit_code": 0, "evidence_path": "artifacts/validation/phase-03/phase-review.log"},
-    {"command": "make typecheck", "attempt": 1, "exit_code": 0, "evidence_path": "artifacts/validation/phase-03/phase-review.log"},
-    {"command": "make db-migrate-check", "attempt": 8, "exit_code": 0, "evidence_path": "artifacts/validation/phase-03/migration-check.log"},
-    {"command": "make test-unit", "attempt": 1, "exit_code": 0, "evidence_path": "artifacts/validation/phase-03/automated-tests.log"},
-    {"command": "make test-contract", "attempt": 1, "exit_code": 0, "evidence_path": "artifacts/validation/phase-03/contract-tests.log"},
-    {"command": "make test-security", "attempt": 1, "exit_code": 0, "evidence_path": "artifacts/validation/phase-03/security-tests.log"},
-    {"command": "make test-integration", "attempt": 1, "exit_code": 0, "evidence_path": "artifacts/validation/phase-03/phase-review.log"},
-    {"command": "make phase PHASE=01", "attempt": 1, "exit_code": 0, "evidence_path": "artifacts/validation/phase-03/phase-review.log"},
-    {"command": "make phase PHASE=02", "attempt": 1, "exit_code": 0, "evidence_path": "artifacts/validation/phase-03/phase-review.log"},
-    {"command": "make phase PHASE=03", "attempt": 1, "exit_code": 0, "evidence_path": "artifacts/validation/phase-03/phase-review.log"}
+    {
+      "command": "git status --short",
+      "attempt": 1,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-03/phase-review.log"
+    },
+    {
+      "command": "git diff --check",
+      "attempt": 1,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-03/phase-review.log"
+    },
+    {
+      "command": "make lint",
+      "attempt": 3,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-03/phase-review.log"
+    },
+    {
+      "command": "make format-check",
+      "attempt": 2,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-03/phase-review.log"
+    },
+    {
+      "command": "make typecheck",
+      "attempt": 1,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-03/phase-review.log"
+    },
+    {
+      "command": "make db-migrate-check",
+      "attempt": 8,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-03/migration-check.log"
+    },
+    {
+      "command": "make test-unit",
+      "attempt": 1,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-03/automated-tests.log"
+    },
+    {
+      "command": "make test-contract",
+      "attempt": 1,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-03/contract-tests.log"
+    },
+    {
+      "command": "make test-security",
+      "attempt": 1,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-03/security-tests.log"
+    },
+    {
+      "command": "make test-integration",
+      "attempt": 1,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-03/phase-review.log"
+    },
+    {
+      "command": "make phase PHASE=01",
+      "attempt": 1,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-03/phase-review.log"
+    },
+    {
+      "command": "make phase PHASE=02",
+      "attempt": 1,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-03/phase-review.log"
+    },
+    {
+      "command": "make phase PHASE=03",
+      "attempt": 1,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-03/phase-review.log"
+    }
   ],
   "tests": [
-    {"id": "P03-001", "result": "PASSED", "evidence_path": "artifacts/validation/phase-03/automated-tests.log", "negative_side_effect_count": 0},
-    {"id": "P03-002", "result": "PASSED", "evidence_path": "artifacts/validation/phase-03/security-tests.log", "negative_side_effect_count": 0},
-    {"id": "P03-003", "result": "PASSED", "evidence_path": "artifacts/validation/phase-03/phase-review.log", "negative_side_effect_count": 0},
-    {"id": "P03-004", "result": "PASSED", "evidence_path": "artifacts/validation/phase-03/phase-review.log", "negative_side_effect_count": 0},
-    {"id": "P03-005", "result": "PASSED", "evidence_path": "artifacts/validation/phase-03/security-tests.log", "negative_side_effect_count": 0},
-    {"id": "P03-006", "result": "PASSED", "evidence_path": "artifacts/validation/phase-03/security-tests.log", "negative_side_effect_count": 0},
-    {"id": "P03-007", "result": "PASSED", "evidence_path": "artifacts/validation/phase-03/security-tests.log", "negative_side_effect_count": 0},
-    {"id": "P03-008", "result": "PASSED", "evidence_path": "artifacts/validation/phase-03/security-tests.log", "negative_side_effect_count": 0}
+    {
+      "id": "P03-001",
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-03/automated-tests.log",
+      "negative_side_effect_count": 0
+    },
+    {
+      "id": "P03-002",
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-03/security-tests.log",
+      "negative_side_effect_count": 0
+    },
+    {
+      "id": "P03-003",
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-03/phase-review.log",
+      "negative_side_effect_count": 0
+    },
+    {
+      "id": "P03-004",
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-03/phase-review.log",
+      "negative_side_effect_count": 0
+    },
+    {
+      "id": "P03-005",
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-03/security-tests.log",
+      "negative_side_effect_count": 0
+    },
+    {
+      "id": "P03-006",
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-03/security-tests.log",
+      "negative_side_effect_count": 0
+    },
+    {
+      "id": "P03-007",
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-03/security-tests.log",
+      "negative_side_effect_count": 0
+    },
+    {
+      "id": "P03-008",
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-03/security-tests.log",
+      "negative_side_effect_count": 0
+    }
   ],
   "review_attempts": [
-    {"attempt": 1, "result": "PASSED", "evidence_path": "artifacts/validation/phase-03/reviewer.md", "fix_summary": "architecture, contracts, migration and recovery; surfaced F-02 and F-03 in the migration"},
-    {"attempt": 2, "result": "PASSED", "evidence_path": "artifacts/validation/phase-03/security-review.md", "fix_summary": "authorization ordering, payload binding, composition, replay, TTL, step-up, rate-limit fail-closed"},
-    {"attempt": 3, "result": "PASSED", "evidence_path": "artifacts/validation/phase-03/test-audit.md", "fix_summary": "found and fixed two vacuous tests; chasing the second surfaced F-01"}
+    {
+      "attempt": 1,
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-03/reviewer.md",
+      "fix_summary": "architecture, contracts, migration and recovery; surfaced F-02 and F-03 in the migration"
+    },
+    {
+      "attempt": 2,
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-03/security-review.md",
+      "fix_summary": "authorization ordering, payload binding, composition, replay, TTL, step-up, rate-limit fail-closed"
+    },
+    {
+      "attempt": 3,
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-03/test-audit.md",
+      "fix_summary": "found and fixed two vacuous tests; chasing the second surfaced F-01"
+    }
   ],
   "findings": [
-    {"severity": "P1", "summary": "TenantProvisioner seeded only OWNER/OPERATOR/VIEWER, so a tenant created after migration 0003 had no DEPUTY role and no approval.decide mapping: every R2 and R3 action in a new tenant would stay PENDING forever.", "disposition": "RESOLVED", "owner": "Nikola", "target": "Phase 03 amendment A-6", "evidence_path": "artifacts/validation/phase-03/security-tests.log"},
-    {"severity": "P1", "summary": "Migration 0003 recorded a role id in role_permissions.granted_by, violating fk_role_permissions_grantor. It passed only because the migration had never run against a database containing a tenant.", "disposition": "RESOLVED", "owner": "Nikola", "target": "Phase 03", "evidence_path": "artifacts/validation/phase-03/security-tests.log"},
-    {"severity": "P1", "summary": "Migration 0003's tenant-scoped seeding and downgrade cleanup were silent no-ops: nexora_migrator holds no BYPASSRLS and matched zero rows without a signed context.", "disposition": "RESOLVED", "owner": "Nikola", "target": "Phase 03", "evidence_path": "artifacts/validation/phase-03/security-tests.log"},
-    {"severity": "P2", "summary": "may_decide treated approval.decide.high as an R3 gate, which would have made ADR-004 approval paths 4 and 5 unreachable.", "disposition": "RESOLVED", "owner": "Nikola", "target": "Phase 03", "evidence_path": "artifacts/validation/phase-03/phase-review.log"},
-    {"severity": "P3", "summary": "Validator assertions compared against module constants after the expected sets became parameters, and one new Phase-03 assertion had a set-operator precedence bug.", "disposition": "RESOLVED", "owner": "Nikola", "target": "Phase 03", "evidence_path": "artifacts/validation/phase-03/migration-check.log"}
+    {
+      "severity": "P1",
+      "summary": "TenantProvisioner seeded only OWNER/OPERATOR/VIEWER, so a tenant created after migration 0003 had no DEPUTY role and no approval.decide mapping: every R2 and R3 action in a new tenant would stay PENDING forever.",
+      "disposition": "RESOLVED",
+      "owner": "Nikola",
+      "target": "Phase 03 amendment A-6",
+      "evidence_path": "artifacts/validation/phase-03/security-tests.log"
+    },
+    {
+      "severity": "P1",
+      "summary": "Migration 0003 recorded a role id in role_permissions.granted_by, violating fk_role_permissions_grantor. It passed only because the migration had never run against a database containing a tenant.",
+      "disposition": "RESOLVED",
+      "owner": "Nikola",
+      "target": "Phase 03",
+      "evidence_path": "artifacts/validation/phase-03/security-tests.log"
+    },
+    {
+      "severity": "P1",
+      "summary": "Migration 0003's tenant-scoped seeding and downgrade cleanup were silent no-ops: nexora_migrator holds no BYPASSRLS and matched zero rows without a signed context.",
+      "disposition": "RESOLVED",
+      "owner": "Nikola",
+      "target": "Phase 03",
+      "evidence_path": "artifacts/validation/phase-03/security-tests.log"
+    },
+    {
+      "severity": "P2",
+      "summary": "may_decide treated approval.decide.high as an R3 gate, which would have made ADR-004 approval paths 4 and 5 unreachable.",
+      "disposition": "RESOLVED",
+      "owner": "Nikola",
+      "target": "Phase 03",
+      "evidence_path": "artifacts/validation/phase-03/phase-review.log"
+    },
+    {
+      "severity": "P3",
+      "summary": "Validator assertions compared against module constants after the expected sets became parameters, and one new Phase-03 assertion had a set-operator precedence bug.",
+      "disposition": "RESOLVED",
+      "owner": "Nikola",
+      "target": "Phase 03",
+      "evidence_path": "artifacts/validation/phase-03/migration-check.log"
+    }
   ],
   "blockers": [],
   "evidence": [
-    {"path": "artifacts/validation/phase-03/REVIEW.md", "purpose": "phase review summary, amendments, findings and open items for Nikola"},
-    {"path": "artifacts/validation/phase-03/reviewer.md", "purpose": "review attempt 1: architecture, contracts, migration, recovery"},
-    {"path": "artifacts/validation/phase-03/security-review.md", "purpose": "review attempt 2: adversarial security pass"},
-    {"path": "artifacts/validation/phase-03/test-audit.md", "purpose": "review attempt 3: test quality, mutation checks, ADR-004 coverage map"},
-    {"path": "artifacts/validation/phase-03/code-attempts.md", "purpose": "every failed attempt with root cause and fix"},
-    {"path": "artifacts/validation/phase-03/human-uat.md", "purpose": "exact UAT commands prepared for Nikola"},
-    {"path": "artifacts/validation/phase-03/changed-files.txt", "purpose": "final changed file list versus the allowlist"},
-    {"path": "artifacts/validation/phase-03/phase-review.log", "purpose": "packet command sequence with exit codes"},
-    {"path": "artifacts/validation/phase-03/migration-check.log", "purpose": "migration chain, catalog hashes and approval boundary assertions"},
-    {"path": "artifacts/validation/phase-03/automated-tests.log", "purpose": "unit suite"},
-    {"path": "artifacts/validation/phase-03/contract-tests.log", "purpose": "contract suite"},
-    {"path": "artifacts/validation/phase-03/security-tests.log", "purpose": "security suite"},
-    {"path": "artifacts/validation/phase-03/per-test-evidence.log", "purpose": "each manifest test ID run individually"}
+    {
+      "path": "artifacts/validation/phase-03/REVIEW.md",
+      "purpose": "phase review summary, amendments, findings and open items for Nikola"
+    },
+    {
+      "path": "artifacts/validation/phase-03/reviewer.md",
+      "purpose": "review attempt 1: architecture, contracts, migration, recovery"
+    },
+    {
+      "path": "artifacts/validation/phase-03/security-review.md",
+      "purpose": "review attempt 2: adversarial security pass"
+    },
+    {
+      "path": "artifacts/validation/phase-03/test-audit.md",
+      "purpose": "review attempt 3: test quality, mutation checks, ADR-004 coverage map"
+    },
+    {
+      "path": "artifacts/validation/phase-03/code-attempts.md",
+      "purpose": "every failed attempt with root cause and fix"
+    },
+    {
+      "path": "artifacts/validation/phase-03/human-uat.md",
+      "purpose": "exact UAT commands prepared for Nikola"
+    },
+    {
+      "path": "artifacts/validation/phase-03/changed-files.txt",
+      "purpose": "final changed file list versus the allowlist"
+    },
+    {
+      "path": "artifacts/validation/phase-03/phase-review.log",
+      "purpose": "packet command sequence with exit codes"
+    },
+    {
+      "path": "artifacts/validation/phase-03/migration-check.log",
+      "purpose": "migration chain, catalog hashes and approval boundary assertions"
+    },
+    {
+      "path": "artifacts/validation/phase-03/automated-tests.log",
+      "purpose": "unit suite"
+    },
+    {
+      "path": "artifacts/validation/phase-03/contract-tests.log",
+      "purpose": "contract suite"
+    },
+    {
+      "path": "artifacts/validation/phase-03/security-tests.log",
+      "purpose": "security suite"
+    },
+    {
+      "path": "artifacts/validation/phase-03/per-test-evidence.log",
+      "purpose": "each manifest test ID run individually"
+    }
   ],
   "human_uat": {
-    "required_ids": ["P03-UAT-01", "P03-UAT-02", "P03-UAT-03"],
+    "required_ids": [
+      "P03-UAT-01",
+      "P03-UAT-02",
+      "P03-UAT-03"
+    ],
     "status": "PENDING",
     "reviewer": "Nikola"
   },
   "known_limitations": [
-    {"summary": "No HTTP authentication boundary. /approvals and /chat both require a trusted ActorContext on request.state.actor; Phase-03 security properties are proved at the service boundary, not over HTTP.", "owner": "Nikola", "target": "Phase 04 (amendment A-3)"},
-    {"summary": "The EUR 10000 threshold's measurement rule (net or gross, currency, conversion) is HD-004. Phase 03 implements the comparison and tests both sides against fixture amounts only.", "owner": "Nikola", "target": "Phase 04"},
-    {"summary": "Auth0 MFA step-up is consumed as ActorContext.assurance. No real MFA challenge is issued or verified by this phase, and ADR-004 makes step-up the only barrier against a compromised OWNER or DEPUTY.", "owner": "Nikola", "target": "Phase 04 or Phase 08"},
-    {"summary": "approval.decide.high is granted and implies approval.decide, but no rule currently requires it: composition is what restricts R3. It is carried as future-proofing rather than an active control.", "owner": "Nikola", "target": "Phase 04"},
-    {"summary": "Amendment A-5 extended a Phase-01 security test's exact grant set, and EXPECTED_PHASE_03_CATALOG_SHA256 is an agent-generated baseline. Both need Nikola's confirmation during UAT.", "owner": "Nikola", "target": "P03-UAT-01"},
-    {"summary": "The ADR-004 TTL table is indexed by approval path, but a TTL must be fixed at request creation before any path is known. approval_ttl derives it from requester authority and amount; that derivation is the agent's reading of the decision, not a stated rule.", "owner": "Nikola", "target": "P03-UAT-01"}
+    {
+      "summary": "No HTTP authentication boundary. /approvals and /chat both require a trusted ActorContext on request.state.actor; Phase-03 security properties are proved at the service boundary, not over HTTP.",
+      "owner": "Nikola",
+      "target": "Phase 04 (amendment A-3)"
+    },
+    {
+      "summary": "The EUR 10000 threshold's measurement rule (net or gross, currency, conversion) is HD-004. Phase 03 implements the comparison and tests both sides against fixture amounts only.",
+      "owner": "Nikola",
+      "target": "Phase 04"
+    },
+    {
+      "summary": "Auth0 MFA step-up is consumed as ActorContext.assurance. No real MFA challenge is issued or verified by this phase, and ADR-004 makes step-up the only barrier against a compromised OWNER or DEPUTY.",
+      "owner": "Nikola",
+      "target": "Phase 04 or Phase 08"
+    },
+    {
+      "summary": "approval.decide.high is granted and implies approval.decide, but no rule currently requires it: composition is what restricts R3. It is carried as future-proofing rather than an active control.",
+      "owner": "Nikola",
+      "target": "Phase 04"
+    },
+    {
+      "summary": "Amendment A-5 extended a Phase-01 security test's exact grant set, and EXPECTED_PHASE_03_CATALOG_SHA256 is an agent-generated baseline. Both need Nikola's confirmation during UAT.",
+      "owner": "Nikola",
+      "target": "P03-UAT-01"
+    },
+    {
+      "summary": "ADR-004 Amendment 1 (split collection/execution TTL windows) is decided by Nikola and implemented, but its signature line in the ADR's Human approval section is still blank.",
+      "owner": "Nikola",
+      "target": "P03-UAT-01"
+    }
   ]
 }

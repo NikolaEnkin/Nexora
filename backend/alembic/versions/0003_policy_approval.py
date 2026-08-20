@@ -208,6 +208,10 @@ def _create_approval_tables() -> None:
         sa.Column("required_assurance", sa.String(20), nullable=False),
         sa.Column("status", sa.String(20), nullable=False),
         sa.Column("satisfied_path_id", sa.Integer(), nullable=True),
+        # ADR-004 §3 as amended: the collection window ends here and the execution
+        # window begins. Two windows need two timestamps; `updated_at` cannot serve,
+        # because it moves on every write.
+        sa.Column("approved_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("idempotency_key", sa.String(255), nullable=False),
         sa.Column("correlation_id", UUID, nullable=False),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
@@ -485,6 +489,10 @@ def _create_guards() -> None:
              OR NEW.risk <> OLD.risk
              OR NEW.created_at <> OLD.created_at THEN
             RAISE EXCEPTION 'approval request identity is immutable'
+              USING ERRCODE = '23514';
+          END IF;
+          IF OLD.approved_at IS NOT NULL AND NEW.approved_at IS DISTINCT FROM OLD.approved_at THEN
+            RAISE EXCEPTION 'approval grant time is immutable once set'
               USING ERRCODE = '23514';
           END IF;
           IF OLD.status = ANY (ARRAY['CONSUMED','REJECTED','CANCELLED','EXPIRED',

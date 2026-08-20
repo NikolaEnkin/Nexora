@@ -120,13 +120,23 @@ _ENTRIES: Final[tuple[CatalogueEntry, ...]] = (
 
 CATALOGUE: Final[Mapping[str, CatalogueEntry]] = {entry.action_key: entry for entry in _ENTRIES}
 
-# `ADR-004` §3. TTL scales with the number of decisions the *open* paths require.
-# It is fixed when the request is created, so it is derived from the requester's
-# authority and the amount rather than from the path eventually used.
-TTL_R2: Final = timedelta(hours=1)
-TTL_R3_SELF_APPROVABLE: Final = timedelta(minutes=10)
-TTL_R3_SINGLE_OR_PAIR: Final = timedelta(hours=1)
-TTL_R3_THREE_PARTY: Final = timedelta(hours=2)
+# `ADR-004` §3 as amended 2026-08-20. An approval has two lifetimes, and the
+# superseded model measured both with one number.
+#
+# The *collection* window runs until the last required decision. Nothing can execute
+# during it, so its length costs only patience, and it scales with how many humans
+# must respond.
+COLLECTION_TTL_R2: Final = timedelta(hours=4)
+COLLECTION_TTL_R3_SELF_APPROVABLE: Final = timedelta(minutes=15)
+COLLECTION_TTL_R3_SINGLE_OR_PAIR: Final = timedelta(hours=4)
+COLLECTION_TTL_R3_THREE_PARTY: Final = timedelta(hours=8)
+
+# The *execution* window runs from the last required decision to the effect. This is
+# the entire exposure — an approved action waiting to fire into a world that may have
+# moved — so it is short, uniform, and independent of amount and path. A
+# two-million-euro action has no more claim to a long loaded window than a €500 one.
+EXECUTION_TTL_R2: Final = timedelta(hours=1)
+EXECUTION_TTL_R3: Final = timedelta(minutes=10)
 
 
 def lookup(action_key: str) -> CatalogueEntry | None:

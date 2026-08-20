@@ -1,11 +1,14 @@
 # P03-007. Boundary cases, each asserting zero protected effect.
 description: expired, revoked and wrong-approver approvals execute nothing
+# ADR-004 §3 as amended 2026-08-20: a collection window until the last required
+# decision, then a short uniform execution window. The two cases below advance past
+# different windows on purpose.
 frozen_now: "2026-01-15T10:00:00Z"
 cases:
   - name: expired
     action_type: client_create
     idempotency_key: expired-1
-    advance_minutes: 61          # R2 TTL is 1 hour
+    advance_minutes: 61          # R2 execution window is 1 hour from approval
     expected_error: APPROVAL_EXPIRED
     expected_status: EXPIRED
     protected_effect_count: 0
@@ -28,7 +31,7 @@ cases:
     idempotency_key: partial-expiry-1
     amount: "50000.00"
     approvers: [operator-2]      # one of the three path-5 slots
-    advance_minutes: 121         # path-5 TTL is 2 hours
+    advance_minutes: 481         # path-5 collection window is 8 hours
     expected_error: APPROVAL_EXPIRED
     expected_status: EXPIRED
     protected_effect_count: 0

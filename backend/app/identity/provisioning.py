@@ -11,10 +11,29 @@ from app.errors import IdempotencyConflict
 from app.events.service import request_hash
 
 PROVISIONING_NAMESPACE = UUID("80000000-0000-0000-0000-000000000001")
+# Phase 03 (amendment A-6, finding F-01) adds DEPUTY and the two approval
+# permissions from accepted `ADR-004` §2. Migration `0003` backfills tenants that
+# already existed; this covers every tenant provisioned afterwards. Without it a
+# new tenant has nobody who may approve anything, so every R2 and R3 action would
+# stay PENDING forever — the approval engine would be present and inert.
+#
+# `DEPUTY` carries approval authority and nothing else: no `tenant.manage`, no
+# `membership.manage`. It is not a second OWNER. Assignment stays an OWNER-only
+# act, because only OWNER holds `membership.manage`, and the database enforces at
+# most one active DEPUTY per tenant.
 ROLE_PERMISSIONS = {
-    "OWNER": ("tenant.read", "tenant.manage", "membership.read", "membership.manage", "audit.read"),
-    "OPERATOR": ("tenant.read", "membership.read"),
+    "OWNER": (
+        "tenant.read",
+        "tenant.manage",
+        "membership.read",
+        "membership.manage",
+        "audit.read",
+        "approval.decide",
+        "approval.decide.high",
+    ),
+    "OPERATOR": ("tenant.read", "membership.read", "approval.decide"),
     "VIEWER": ("tenant.read", "membership.read"),
+    "DEPUTY": ("tenant.read", "membership.read", "approval.decide", "approval.decide.high"),
 }
 
 

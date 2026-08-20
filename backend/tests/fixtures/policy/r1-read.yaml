@@ -1,0 +1,28 @@
+# P03-001 fixture. An authorized R1 read under accepted ADR-004 §1.
+# Fixed identifiers and arguments; nothing here is generated at run time.
+actor:
+  tenant_id: "20000000-0000-0000-0000-000000000001"
+  actor_id: "30000000-0000-0000-0000-000000000001"
+  subject: "auth0|fixture-operator"
+  auth_method: "test_fixture"
+  assurance: "standard"
+  roles: ["OPERATOR"]
+  permissions: ["invoice.read"]
+  correlation_id: "90000000-0000-0000-0000-000000000001"
+descriptor:
+  action_type: "invoice_get"
+  target_type: "invoice"
+  target_id: "40000000-0000-0000-0000-000000000001"
+  normalized_arguments:
+    invoice_id: "40000000-0000-0000-0000-000000000001"
+  idempotency_key: "fixture-r1-invoice-get"
+expected:
+  effect: "ALLOW"
+  risk: "R1"
+  reason_code: "ALLOWED"
+  required_permission: "invoice.read"
+  required_assurance: "standard"
+  policy_version: 1
+  catalogue_version: 1
+  normalization_version: 1
+  approval_path_ids: []

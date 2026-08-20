@@ -1,0 +1,14 @@
+{
+  "description": "P03-005. A payload approved at v1, then materially edited.",
+  "action_type": "invoice_issue",
+  "target_type": "invoice",
+  "target_id": "40000000-0000-0000-0000-000000000001",
+  "idempotency_key": "edited-1",
+  "original_arguments": {"amount": "500.00", "currency": "EUR", "invoice_id": "40000000-0000-0000-0000-000000000001"},
+  "edited_arguments": {"amount": "50000.00", "currency": "EUR", "invoice_id": "40000000-0000-0000-0000-000000000002"},
+  "expected": {
+    "error_code": "APPROVAL_STALE",
+    "approval_status": "INVALIDATED",
+    "protected_effect_count": 0
+  }
+}

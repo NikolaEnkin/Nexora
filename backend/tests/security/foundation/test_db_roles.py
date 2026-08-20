@@ -49,7 +49,23 @@ def test_runtime_roles_are_least_privilege() -> None:
                 )
             ).all()
         }
+        # Phase 03 (amendment A-5) adds the approval boundary's grants. The
+        # assertion stays an exact match — it is extended, never relaxed — and
+        # `DELETE` remains absent from every entry, on Phase-01 and Phase-03
+        # tables alike.
+        assert all(privilege != "DELETE" for _, privilege in grants)
         assert grants == {
+            ("approval_consumptions", "INSERT"),
+            ("approval_consumptions", "SELECT"),
+            ("approval_decisions", "INSERT"),
+            ("approval_decisions", "SELECT"),
+            ("approval_requests", "INSERT"),
+            ("approval_requests", "SELECT"),
+            ("approval_requests", "UPDATE"),
+            ("policy_action_catalogue", "SELECT"),
+            ("protected_effect_counters", "INSERT"),
+            ("protected_effect_counters", "SELECT"),
+            ("protected_effect_counters", "UPDATE"),
             ("audit_events", "INSERT"),
             ("audit_events", "SELECT"),
             ("auth_sessions", "INSERT"),

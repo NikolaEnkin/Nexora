@@ -78,7 +78,14 @@ class AgentRoute(StrEnum):
 
 
 class ReasonCode(StrEnum):
-    """Registered reason codes attached to lifecycle transitions."""
+    """Registered reason codes attached to lifecycle transitions.
+
+    Phase 03 adds the four approval reasons. They are additive members of an
+    existing registered field, so `StreamEvent v1` does not take a major bump
+    (contract matrix, "additive optional fields"). They carry no approval payload,
+    no amount and no approver identity — a reason code is a closed enum value, so
+    there is nothing in it for message or model text to influence.
+    """
 
     ACCEPTED = "ACCEPTED"
     NODE_ADVANCED = "NODE_ADVANCED"
@@ -88,6 +95,10 @@ class ReasonCode(StrEnum):
     COMPLETED = "COMPLETED"
     RUNTIME_ERROR = "RUNTIME_ERROR"
     CANCELLED_BY_ACTOR = "CANCELLED_BY_ACTOR"
+    APPROVAL_REQUIRED = "APPROVAL_REQUIRED"
+    APPROVAL_GRANTED = "APPROVAL_GRANTED"
+    APPROVAL_REJECTED = "APPROVAL_REJECTED"
+    APPROVAL_EXPIRED = "APPROVAL_EXPIRED"
 
 
 class MessageRole(StrEnum):

@@ -48,7 +48,43 @@ EXPECTED_CATALOG_SHA256 = "a3981e630def8e0fc3e9134fff66c1d95aef98e3dc8051027bff8
 
 PHASE_01_HEAD = "0001_foundation"
 PHASE_02_HEAD = "0002_langgraph_checkpoint"
-MIGRATION_CHAIN = [PHASE_02_HEAD, PHASE_01_HEAD]
+PHASE_03_HEAD = "0003_policy_approval"
+# Newest first, matching `walk_revisions`. Extended additively in Phase 03 under
+# amendment A-1: every Phase-01 and Phase-02 assertion below is unchanged, and the
+# chain simply grew by one revision.
+MIGRATION_CHAIN = [PHASE_03_HEAD, PHASE_02_HEAD, PHASE_01_HEAD]
+CURRENT_HEAD = PHASE_03_HEAD
+
+# Phase 03 changes the public catalog on purpose (amendment A-2). This pins the new
+# shape so an *unintended* further change is still caught.
+EXPECTED_PHASE_03_CATALOG_SHA256 = (
+    "d0e6de8f5d09cab54127fcf1f71be710187298a80008e245e082aa1b9d3deeeb"
+)
+
+APPROVAL_TABLES = (
+    "approval_requests",
+    "approval_decisions",
+    "approval_consumptions",
+    "protected_effect_counters",
+)
+APPROVAL_HISTORY_TABLES = ("approval_decisions", "approval_consumptions")
+PHASE_03_TABLES = REQUIRED_TABLES | set(APPROVAL_TABLES) | {"policy_action_catalogue"}
+PHASE_03_TENANT_TABLES = TENANT_TABLES | set(APPROVAL_TABLES)
+PHASE_03_TRIGGERS = frozenset(
+    {
+        "trg_approval_decisions_append_only",
+        "trg_approval_consumptions_append_only",
+        "trg_approval_requests_protect_state",
+        "trg_user_roles_single_deputy",
+    }
+)
+PHASE_03_FUNCTIONS = frozenset(
+    {
+        "enforce_single_active_deputy",
+        "protect_approval_request_state",
+        "reject_approval_history_change",
+    }
+)
 
 AGENT_SCHEMA = "nexora_agent"
 AGENT_TABLES = {
@@ -111,7 +147,7 @@ def _guard_local_database(url: str) -> None:
     script = ScriptDirectory.from_config(Config("backend/alembic.ini"))
     heads = script.get_heads()
     revisions = list(script.walk_revisions())
-    if heads != [PHASE_02_HEAD] or [item.revision for item in revisions] != MIGRATION_CHAIN:
+    if heads != [CURRENT_HEAD] or [item.revision for item in revisions] != MIGRATION_CHAIN:
         raise RuntimeError(
             f"downgrade check requires the exact ordered revision chain {MIGRATION_CHAIN}"
         )
@@ -126,7 +162,24 @@ def _alembic(*arguments: str) -> None:
     )
 
 
-def _snapshot(url: str, expected_head: str) -> dict[str, Any]:
+def _snapshot(
+    url: str,
+    expected_head: str,
+    *,
+    expected_tables: frozenset[str] | None = None,
+    tenant_tables: frozenset[str] | None = None,
+    extra_triggers: frozenset[str] = frozenset(),
+    extra_functions: frozenset[str] = frozenset(),
+) -> dict[str, Any]:
+    """Snapshot the `public` catalog.
+
+    The expected table and tenant-table sets are parameters rather than module
+    constants because the set legitimately grows per revision. Defaulting to the
+    Phase-01 sets keeps every existing call site asserting exactly what it did
+    before (amendment A-1: additive only).
+    """
+    required = REQUIRED_TABLES if expected_tables is None else expected_tables
+    tenant_scoped = TENANT_TABLES if tenant_tables is None else tenant_tables
     engine = create_engine(url)
     with engine.connect() as connection:
         tables = set(
@@ -134,9 +187,9 @@ def _snapshot(url: str, expected_head: str) -> dict[str, Any]:
                 text("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
             ).scalars()
         )
-        if tables != REQUIRED_TABLES:
+        if tables != required:
             raise AssertionError(
-                f"unexpected tables: expected={sorted(REQUIRED_TABLES)} actual={sorted(tables)}"
+                f"unexpected tables: expected={sorted(required)} actual={sorted(tables)}"
             )
         head = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
         if head != expected_head:
@@ -148,9 +201,9 @@ def _snapshot(url: str, expected_head: str) -> dict[str, Any]:
                 WHERE relnamespace = 'public'::regnamespace AND relname = ANY(:tables)
                 ORDER BY relname"""
             ),
-            {"tables": sorted(TENANT_TABLES)},
+            {"tables": sorted(tenant_scoped)},
         ).all()
-        if {row[0] for row in rls_rows} != TENANT_TABLES:
+        if {row[0] for row in rls_rows} != tenant_scoped:
             raise AssertionError("one or more tenant-sensitive tables are missing")
         if any(not row[1] or not row[2] for row in rls_rows):
             raise AssertionError("one or more tenant-sensitive tables lack ENABLE/FORCE RLS")
@@ -204,9 +257,9 @@ def _snapshot(url: str, expected_head: str) -> dict[str, Any]:
                 WHERE n.nspname = 'public' AND p.proname = ANY(:names)
                 ORDER BY p.proname"""
             ),
-            {"names": sorted(REQUIRED_FUNCTIONS)},
+            {"names": sorted(REQUIRED_FUNCTIONS | extra_functions)},
         ).all()
-        if {row.proname for row in function_rows} != REQUIRED_FUNCTIONS:
+        if {row.proname for row in function_rows} != REQUIRED_FUNCTIONS | extra_functions:
             raise AssertionError("required security/state function is missing")
         trigger_rows = connection.execute(
             text(
@@ -230,7 +283,7 @@ def _snapshot(url: str, expected_head: str) -> dict[str, Any]:
             "trg_user_roles_revoke_sessions",
             "trg_users_preserve_owner",
             "trg_users_revoke_sessions",
-        }
+        } | extra_triggers
         if {row.tgname for row in trigger_rows} != required_trigger_names:
             raise AssertionError("required security/state trigger is missing or unexpected")
         runtime = connection.execute(
@@ -302,7 +355,7 @@ def _snapshot(url: str, expected_head: str) -> dict[str, Any]:
                 ORDER BY tablename, policyname"""
             )
         ).all()
-        if {row.tablename for row in policies} != TENANT_TABLES:
+        if {row.tablename for row in policies} != tenant_scoped:
             raise AssertionError("tenant RLS policy set is incomplete")
         grants = connection.execute(
             text(
@@ -555,6 +608,94 @@ def _clear_fixture_rows(url: str) -> None:
             )
 
 
+def _assert_phase03_boundary(url: str) -> None:
+    """Assert the Phase-03 approval boundary directly against PostgreSQL.
+
+    Additive: nothing here relaxes a Phase-01 or Phase-02 assertion. These are the
+    properties `ADR-004` states as *database* properties, so they are checked
+    against the database rather than through the service that relies on them.
+    """
+    engine = create_engine(url)
+    with engine.connect() as connection:
+        present = {
+            row[0]
+            for row in connection.execute(
+                text("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
+            )
+        }
+        missing = (set(APPROVAL_TABLES) | {"policy_action_catalogue"}) - present
+        if missing:
+            raise AssertionError(f"Phase-03 tables are missing: {sorted(missing)}")
+
+        rls = (
+            connection.execute(
+                text(
+                    """SELECT relname FROM pg_class
+                WHERE relnamespace = 'public'::regnamespace AND relname = ANY(:tables)
+                  AND relrowsecurity AND relforcerowsecurity"""
+                ),
+                {"tables": list(APPROVAL_TABLES)},
+            )
+            .scalars()
+            .all()
+        )
+        if set(rls) != set(APPROVAL_TABLES):
+            raise AssertionError("an approval table lacks ENABLE/FORCE row-level security")
+
+        deletes = (
+            connection.execute(
+                text(
+                    """SELECT table_name FROM information_schema.role_table_grants
+                WHERE grantee = 'nexora_runtime' AND privilege_type = 'DELETE'
+                  AND table_name = ANY(:tables)"""
+                ),
+                {"tables": [*APPROVAL_TABLES, "policy_action_catalogue"]},
+            )
+            .scalars()
+            .all()
+        )
+        if deletes:
+            raise AssertionError(f"nexora_runtime holds DELETE on {sorted(deletes)}")
+
+        updates = (
+            connection.execute(
+                text(
+                    """SELECT table_name FROM information_schema.role_table_grants
+                WHERE grantee = 'nexora_runtime' AND privilege_type = 'UPDATE'
+                  AND table_name = ANY(:tables)"""
+                ),
+                {"tables": list(APPROVAL_HISTORY_TABLES)},
+            )
+            .scalars()
+            .all()
+        )
+        if updates:
+            raise AssertionError(f"approval history is not append-only: {sorted(updates)}")
+
+        roles_check = connection.execute(
+            text(
+                "SELECT pg_get_constraintdef(oid) FROM pg_constraint "
+                "WHERE conname = 'ck_roles_name'"
+            )
+        ).scalar_one()
+        if "DEPUTY" not in roles_check:
+            raise AssertionError("ck_roles_name does not admit the ADR-004 DEPUTY role")
+
+        seeded = connection.execute(
+            text("SELECT count(*) FROM policy_action_catalogue WHERE catalogue_version = 1")
+        ).scalar_one()
+        if seeded != 21:
+            raise AssertionError(f"catalogue v1 seeded {seeded} actions, expected 21")
+
+        for permission_key in ("approval.decide", "approval.decide.high"):
+            exists = connection.execute(
+                text("SELECT count(*) FROM permissions WHERE permission_key = :key"),
+                {"key": permission_key},
+            ).scalar_one()
+            if not exists:
+                raise AssertionError(f"permission {permission_key} is missing")
+
+
 def main() -> None:
     url = get_migration_settings().migration_database_url
     _guard_local_database(url)
@@ -580,29 +721,74 @@ def main() -> None:
             f"catalog differs from the exact Phase-01 schema contract: actual={phase01_hash}"
         )
 
-    _alembic("upgrade", "head")
-    first = _snapshot(url, PHASE_02_HEAD)
-    first_agent = _agent_snapshot(url)
-    if _without_head(first) != _without_head(phase01):
+    # Stop at the Phase-02 head next. The Phase-01 public catalog must still be
+    # byte-identical here: Phase 02's isolation claim is unaffected by Phase 03.
+    _alembic("upgrade", PHASE_02_HEAD)
+    phase02 = _snapshot(url, PHASE_02_HEAD)
+    phase02_agent = _agent_snapshot(url)
+    if _without_head(phase02) != _without_head(phase01):
         raise AssertionError("Phase 02 mutated the Phase-01 public catalog")
-    first_agent_hash = _catalog_hash(first_agent)
-    if first_agent_hash != EXPECTED_AGENT_CATALOG_SHA256:
+    phase02_agent_hash = _catalog_hash(phase02_agent)
+    if phase02_agent_hash != EXPECTED_AGENT_CATALOG_SHA256:
         raise AssertionError(
-            f"agent catalog differs from the Phase-02 schema contract: actual={first_agent_hash}"
+            f"agent catalog differs from the Phase-02 schema contract: actual={phase02_agent_hash}"
         )
 
+    # Phase 03 deliberately renegotiates the public catalog (amendment A-2:
+    # ADR-004 requires a DEPUTY role that ck_roles_name forbids). The new shape is
+    # pinned by its own hash, so an *unintended* further change still fails.
     _alembic("upgrade", "head")
-    if (_snapshot(url, PHASE_02_HEAD), _agent_snapshot(url)) != (first, first_agent):
+    first = _snapshot(
+        url,
+        CURRENT_HEAD,
+        expected_tables=frozenset(PHASE_03_TABLES),
+        tenant_tables=frozenset(PHASE_03_TENANT_TABLES),
+        extra_triggers=PHASE_03_TRIGGERS,
+        extra_functions=PHASE_03_FUNCTIONS,
+    )
+    first_agent = _agent_snapshot(url)
+    first_hash = _catalog_hash(first)
+    if first_hash != EXPECTED_PHASE_03_CATALOG_SHA256:
+        raise AssertionError(
+            f"catalog differs from the Phase-03 schema contract: actual={first_hash}"
+        )
+    if first_agent != phase02_agent:
+        raise AssertionError("Phase 03 mutated the Phase-02 agent schema")
+    _assert_phase03_boundary(url)
+
+    _alembic("upgrade", "head")
+    if (
+        _snapshot(
+            url,
+            CURRENT_HEAD,
+            expected_tables=frozenset(PHASE_03_TABLES),
+            tenant_tables=frozenset(PHASE_03_TENANT_TABLES),
+            extra_triggers=PHASE_03_TRIGGERS,
+            extra_functions=PHASE_03_FUNCTIONS,
+        ),
+        _agent_snapshot(url),
+    ) != (first, first_agent):
         raise AssertionError("second upgrade produced catalog drift")
 
     _alembic("downgrade", "base")
     _alembic("upgrade", "head")
-    if (_snapshot(url, PHASE_02_HEAD), _agent_snapshot(url)) != (first, first_agent):
+    if (
+        _snapshot(
+            url,
+            CURRENT_HEAD,
+            expected_tables=frozenset(PHASE_03_TABLES),
+            tenant_tables=frozenset(PHASE_03_TENANT_TABLES),
+            extra_triggers=PHASE_03_TRIGGERS,
+            extra_functions=PHASE_03_FUNCTIONS,
+        ),
+        _agent_snapshot(url),
+    ) != (first, first_agent):
         raise AssertionError("downgrade/upgrade recovery produced catalog drift")
 
     print(
-        f"migration-check: {PHASE_01_HEAD} -> {PHASE_02_HEAD}, no drift, "
-        "Phase-01 public catalog unchanged, agent RLS/grants verified"
+        f"migration-check: {PHASE_01_HEAD} -> {PHASE_02_HEAD} -> {CURRENT_HEAD}, no drift, "
+        "Phase-01 catalog reproduced, Phase-02 agent schema unchanged, "
+        "Phase-03 approval RLS/grants verified"
     )
 
 

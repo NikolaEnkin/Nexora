@@ -47,10 +47,10 @@ test-integration: db-migrate
 test-security: db-migrate
 	@$(PYTEST) -q -m security
 
-# Phase 02 runs the same complete suite as Phase 01: the Phase-01 tests are the
-# regression gate, so neither phase may select only its own tests.
+# Every phase runs the same complete suite: earlier phases are the regression
+# gate, so no phase may select only its own tests.
 phase:
-	@test "$(PHASE)" = "01" -o "$(PHASE)" = "02" || (echo "PHASE must be 01 or 02" >&2; exit 2)
+	@test "$(PHASE)" = "01" -o "$(PHASE)" = "02" -o "$(PHASE)" = "03" || (echo "PHASE must be 01, 02 or 03" >&2; exit 2)
 	@$(MAKE) db-migrate
 	@$(PYTEST) -q
 

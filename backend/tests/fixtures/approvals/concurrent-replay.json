@@ -1,0 +1,15 @@
+{
+  "description": "P03-006. One current grant, ten workers racing to consume it.",
+  "action_type": "client_create",
+  "target_type": "client",
+  "target_id": "40000000-0000-0000-0000-000000000001",
+  "normalized_arguments": {"name": "Example GmbH"},
+  "idempotency_key": "concurrent-1",
+  "workers": 10,
+  "expected": {
+    "executed": 1,
+    "replayed": 9,
+    "protected_effect_count": 1,
+    "consumption_rows": 1
+  }
+}

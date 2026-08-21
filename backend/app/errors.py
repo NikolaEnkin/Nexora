@@ -7,6 +7,23 @@ from fastapi.responses import JSONResponse
 
 from app.contracts.foundation import ErrorEnvelope
 
+# Detail keys an error envelope may carry to a client. Everything else is dropped,
+# so a detail nobody vetted cannot reach a caller by being added upstream.
+#
+# Each of these is a code, a version or an identifier — never business content.
+# Without them a 422 cannot say which field was wrong, a 429 cannot say when to
+# retry, and a business-rule refusal cannot say which rule. Found while driving
+# the API by hand: the code was passing a `reason` that could never arrive.
+SAFE_DETAIL_KEYS = frozenset(
+    {
+        "supported_major",  # contract version negotiation
+        "reason",  # schema validation message, about shape not payload
+        "rule",  # business rule identifier
+        "retry_after",  # seconds, for a rate limit
+        "approval_id",  # an identifier; object authorization still applies
+    }
+)
+
 
 @dataclass(slots=True)
 class ApplicationError(Exception):
@@ -95,8 +112,6 @@ def install_error_handlers(app: FastAPI) -> None:
             message=error.message,
             correlation_id=correlation_id,
             retryable=error.retryable,
-            details={
-                key: value for key, value in error.details.items() if key in {"supported_major"}
-            },
+            details={key: value for key, value in error.details.items() if key in SAFE_DETAIL_KEYS},
         )
         return JSONResponse(status_code=error.status_code, content=envelope.model_dump(mode="json"))

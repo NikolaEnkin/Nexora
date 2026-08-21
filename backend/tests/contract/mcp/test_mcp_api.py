@@ -168,3 +168,41 @@ def test_an_approved_write_succeeds_over_http() -> None:
     replayed = client.post("/mcp/call", json=payload).json()
     assert replayed["outcome"] == ToolOutcome.SUCCEEDED.value
     assert replayed["replayed"] is True
+
+
+def test_a_schema_refusal_says_which_field_was_wrong() -> None:
+    """Found by hand: the code passed a `reason` the error envelope dropped.
+
+    A 422 with an empty `details` tells a caller nothing actionable. The reason is
+    the *schema's* message — about shape, never about the payload — so it is safe
+    to return and necessary to be useful.
+    """
+    harness = build_mcp_harness()
+    response = _client(harness, operator(1)).post(
+        "/mcp/call",
+        json={
+            "tool_name": "client_create",
+            "arguments": {"legal_name": "", "display_name": "X"},
+            "idempotency_key": "empty-name",
+        },
+    )
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["code"] == "TOOL_SCHEMA_INVALID"
+    assert body["details"]["reason"], "the refusal must say what was wrong"
+    # The reason describes the constraint, not the value that broke it.
+    assert "legal_name" not in body["details"]["reason"] or "short" in body["details"]["reason"]
+
+
+def test_a_business_rule_refusal_names_the_rule() -> None:
+    harness = build_mcp_harness()
+    response = _client(harness, operator(1)).post(
+        "/mcp/call",
+        json={"tool_name": "client_get", "arguments": {}},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["error"]["code"] == "BUSINESS_RULE_VIOLATION"
+    assert body["error"]["details"]["rule"]

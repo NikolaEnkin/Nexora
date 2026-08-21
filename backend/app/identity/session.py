@@ -13,6 +13,10 @@ SESSION_COOKIE_ATTRIBUTES = {
     "path": "/",
 }
 IDLE_TIMEOUT = timedelta(minutes=30)
+# ADR-004 §4: several R3 approvals may proceed under one proof of identity,
+# while the proof stays recent. A per-action prompt at up to 100 actions a day
+# would be switched off within a week, and a disabled control protects nothing.
+STEP_UP_WINDOW = timedelta(minutes=5)
 ABSOLUTE_TIMEOUT = timedelta(hours=12)
 
 

@@ -21,9 +21,10 @@ means the more permissive one is the real one.
 the same 401 with the same code and no details, so probing a cookie value reveals
 nothing about whether a session ever existed.
 
-Step-up is deliberately absent. `ADR-004` Amendment 2 fixes the factor — TOTP for
-everyone, WebAuthn for `OWNER` and `DEPUTY` — but it is unsigned, and the
-amendment itself forbids writing step-up code before it is signed.
+Step-up follows `ADR-004` §4 with Amendment 2, signed 2026-08-21: TOTP for
+everyone, WebAuthn for `OWNER` and `DEPUTY`. `POST /auth/step-up` records a proven
+factor against the session; `assurance` is then derived per request from that
+timestamp, never stored on the actor and never accepted from a caller.
 """
 
 from collections.abc import Awaitable, Callable
@@ -34,6 +35,7 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Request, Response, status
 from fastapi.responses import JSONResponse
+from pydantic import Field
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
@@ -43,6 +45,13 @@ from app.contracts.foundation import FrozenContract
 from app.errors import ApplicationError, AuthenticationRequired
 from app.identity.session import SESSION_COOKIE_NAME, validate_csrf_and_origin
 from app.identity.session_store import PostgresSessionStore
+from app.identity.step_up import (
+    StepUpFactor,
+    StepUpFailed,
+    StepUpVerifier,
+    required_factor,
+    satisfies,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -71,6 +80,7 @@ class AuthDependencies:
     store: PostgresSessionStore
     settings: Settings
     clock: Callable[[], datetime]
+    step_up: StepUpVerifier | None = None
 
     def __post_init__(self) -> None:
         """Fail closed on a production origin that would defeat the Origin check.
@@ -177,6 +187,18 @@ class SessionView(FrozenContract):
     assurance: str
 
 
+def _actor(request: Request) -> ActorContext:
+    """The trusted actor the middleware resolved, or nothing.
+
+    Never assembled here. `AuthenticationRequired` is the same answer whether the
+    session was absent, forged, expired or revoked.
+    """
+    actor = getattr(request.state, "actor", None)
+    if not isinstance(actor, ActorContext):
+        raise AuthenticationRequired
+    return actor
+
+
 def _dependencies(request: Request) -> AuthDependencies:
     dependencies = getattr(request.app.state, "auth", None)
     if not isinstance(dependencies, AuthDependencies):
@@ -252,9 +274,7 @@ async def dev_login(request: Request) -> Response:
 @router.get("/session")
 async def read_session(request: Request) -> Response:
     """What the server believes about the caller. Useful for driving the API by hand."""
-    actor = getattr(request.state, "actor", None)
-    if not isinstance(actor, ActorContext):
-        raise AuthenticationRequired
+    actor = _actor(request)
     view = SessionView(
         tenant_id=actor.tenant_id,
         actor_id=actor.actor_id,
@@ -268,9 +288,7 @@ async def read_session(request: Request) -> Response:
 
 @router.post("/logout")
 async def logout(request: Request) -> Response:
-    actor = getattr(request.state, "actor", None)
-    if not isinstance(actor, ActorContext):
-        raise AuthenticationRequired
+    actor = _actor(request)
     dependencies = _dependencies(request)
     raw_token = request.cookies.get(SESSION_COOKIE_NAME)
     if raw_token is not None:
@@ -278,3 +296,80 @@ async def logout(request: Request) -> Response:
     response = JSONResponse(status_code=status.HTTP_200_OK, content={"version": "1"})
     response.delete_cookie(SESSION_COOKIE_NAME, path="/")
     return response
+
+
+class StepUpRequest(FrozenContract):
+    """`extra="forbid"`. There is no field for a factor *claim* — `evidence` is
+    what the provider returns, and the verifier decides what it proves."""
+
+    version: Literal["1"] = "1"
+    evidence: str = Field(min_length=1, max_length=4096)
+
+
+@router.post("/step-up")
+async def step_up(request: Request) -> Response:
+    """Prove a second factor for this session.
+
+    Three things are deliberate.
+
+    **The session is stamped, not the user.** Proving a factor on one device must
+    not make another session — or a stolen one — count as recently verified.
+
+    **The server's clock is recorded, not the provider's.** A provider reporting a
+    future `auth_time` would otherwise widen the window; a database trigger refuses
+    a future or backwards value as well.
+
+    **The factor must be strong enough for the actor's roles.** An `OWNER` or
+    `DEPUTY` presenting TOTP is refused, because Amendment 2 puts WebAuthn exactly
+    where one account can approve any amount alone.
+    """
+    actor = _actor(request)
+    dependencies = _dependencies(request)
+    if dependencies.step_up is None:
+        raise ApplicationError(code="NOT_FOUND", message="Not found.", status_code=404)
+
+    try:
+        body = StepUpRequest.model_validate(await request.json())
+    except Exception as error:
+        raise ApplicationError(
+            code="VALIDATION_FAILED",
+            message="The step-up request is not valid.",
+            status_code=422,
+        ) from error
+
+    evidence = dependencies.step_up.verify(subject=actor.subject, evidence=body.evidence)
+    if not satisfies(evidence.factor, actor.roles):
+        raise StepUpFailed
+
+    raw_token = request.cookies.get(SESSION_COOKIE_NAME)
+    if raw_token is None:
+        raise AuthenticationRequired
+    dependencies.store.record_step_up(raw_token, actor, evidence.factor, dependencies.clock())
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "version": "1",
+            "assurance": "step_up",
+            "factor": evidence.factor.value,
+            "required_factor": required_factor(actor.roles).value,
+            "window_minutes": 5,
+        },
+    )
+
+
+@router.get("/step-up/required")
+async def step_up_required(request: Request) -> Response:
+    """Which factor this actor owes, so a client can prompt for the right one."""
+    actor = _actor(request)
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "version": "1",
+            "required_factor": required_factor(actor.roles).value,
+            "current_assurance": actor.assurance,
+            "accepted_factors": [
+                factor.value for factor in StepUpFactor if satisfies(factor, actor.roles)
+            ],
+        },
+    )

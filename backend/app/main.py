@@ -111,12 +111,19 @@ def _default_auth(settings: Settings) -> AuthDependencies:
     from app.identity import PostgresSessionStore
 
     sessions = build_session_factory(build_engine(settings.database_url))
+    clock = lambda: datetime.now(UTC)  # noqa: E731
+    verifier = None
+    if settings.environment in {"development", "test"} and settings.fake_identity_enabled:
+        from app.identity.step_up import FakeStepUpVerifier
+
+        verifier = FakeStepUpVerifier(settings=settings, clock=clock)
     return AuthDependencies(
         store=PostgresSessionStore(
             sessions=sessions, pepper=settings.session_hash_pepper.get_secret_value()
         ),
         settings=settings,
-        clock=lambda: datetime.now(UTC),
+        clock=clock,
+        step_up=verifier,
     )
 
 

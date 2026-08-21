@@ -53,8 +53,11 @@ PHASE_03_HEAD = "0003_policy_approval"
 # amendment A-1: every Phase-01 and Phase-02 assertion below is unchanged, and the
 # chain simply grew by one revision.
 PHASE_04_HEAD = "0004_business_domain"
-MIGRATION_CHAIN = [PHASE_04_HEAD, PHASE_03_HEAD, PHASE_02_HEAD, PHASE_01_HEAD]
-CURRENT_HEAD = PHASE_04_HEAD
+# Step-up gets its own revision: a session column has no business in a migration
+# named `business_domain`.
+STEP_UP_HEAD = "0005_session_step_up"
+MIGRATION_CHAIN = [STEP_UP_HEAD, PHASE_04_HEAD, PHASE_03_HEAD, PHASE_02_HEAD, PHASE_01_HEAD]
+CURRENT_HEAD = STEP_UP_HEAD
 
 # Phase 03 changes the public catalog on purpose (amendment A-2). This pins the new
 # shape so an *unintended* further change is still caught.
@@ -94,9 +97,10 @@ PHASE_03_FUNCTIONS = frozenset(
 PHASE_04_TABLES = PHASE_03_TABLES | {"clients"}
 PHASE_04_TENANT_TABLES = PHASE_03_TENANT_TABLES | {"clients"}
 PHASE_04_TRIGGERS = PHASE_03_TRIGGERS | {"trg_clients_protect_identity"}
-PHASE_04_FUNCTIONS = PHASE_03_FUNCTIONS | {"protect_client_identity"}
+PHASE_04_FUNCTIONS = PHASE_03_FUNCTIONS | {"protect_client_identity", "protect_session_step_up"}
+PHASE_04_TRIGGERS = PHASE_04_TRIGGERS | {"trg_auth_sessions_protect_step_up"}
 EXPECTED_PHASE_04_CATALOG_SHA256 = (
-    "418325ff81ae9c3d81747e40ab5d2c44aa67e9b12dc482f3716154066f86c855"
+    "e99cb83d697c3069a8b70b6520b47b25735943fe41f929a4670d069fe4871bb5"
 )
 
 AGENT_SCHEMA = "nexora_agent"

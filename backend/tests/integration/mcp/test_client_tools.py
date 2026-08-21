@@ -226,3 +226,74 @@ def test_the_backend_owns_the_identity_not_the_caller() -> None:
     assert "row_version" not in CLIENT_CREATE.input_schema["properties"]
     assert "normalized_key" not in CLIENT_CREATE.input_schema["properties"]
     assert UUID is not None and uuid4() is not None
+
+
+def test_a_freshly_provisioned_tenant_can_use_the_client_tools() -> None:
+    """The regression for the defect the live run found.
+
+    Every other case here injects permissions straight into `ActorContext`, so all
+    of them would keep passing even if no role in the database mapped
+    `client.write` to anybody. This one reads the permissions back out of
+    PostgreSQL, which is the only way the gap becomes visible.
+
+    Migration `0004` backfills tenants that already exist; `TenantProvisioner`
+    covers the ones created afterwards. Miss either half and the tools are inert
+    for real users while the suite stays green — that was Phase-03 finding F-01,
+    recurring.
+    """
+    from sqlalchemy import text
+
+    from app.contracts import ActorContext
+    from app.db import set_request_context
+    from tests.integration.approvals.support import OPERATOR_1_ID, OWNER_ID
+    from tests.integration.foundation.support import TENANT_A
+
+    harness = build_mcp_harness()
+
+    def permissions_of(role: str) -> tuple[str, ...]:
+        with harness.sessions() as session, session.begin():
+            set_request_context(session, TENANT_A, OWNER_ID)
+            rows = (
+                session.execute(
+                    text(
+                        """SELECT p.permission_key
+                        FROM role_permissions rp
+                        JOIN roles r ON r.id = rp.role_id
+                        JOIN permissions p ON p.id = rp.permission_id
+                        WHERE r.tenant_id = :tenant AND r.name = :role"""
+                    ),
+                    {"tenant": TENANT_A, "role": role},
+                )
+                .scalars()
+                .all()
+            )
+        return tuple(rows)
+
+    operator_permissions = permissions_of("OPERATOR")
+    assert "client.write" in operator_permissions, "provisioning grants no client.write"
+    assert "client.read" in operator_permissions
+    assert "client.write" not in permissions_of("VIEWER")
+
+    actor = ActorContext(
+        tenant_id=TENANT_A,
+        actor_id=OPERATOR_1_ID,
+        subject="auth0|from-database",
+        auth_method="test_fixture",
+        assurance="step_up",
+        roles=("OPERATOR",),
+        permissions=operator_permissions,
+        correlation_id=uuid4(),
+    )
+
+    call = envelope(
+        "client_create",
+        {"legal_name": "Database Permissions Ltd", "display_name": "DB Perms"},
+        idempotency_key="from-db-permissions",
+    )
+    approve_pending(harness, actor, call)
+    result = harness.gateway.call(
+        actor=actor, envelope=call, authenticated_audience=ToolAudience.AGENT
+    )
+
+    assert result.outcome is ToolOutcome.SUCCEEDED
+    assert counts(harness, actor)["clients"] == 1

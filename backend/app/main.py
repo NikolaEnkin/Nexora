@@ -10,6 +10,8 @@ from app.api.auth import router as auth_router
 from app.api.chat import router as chat_router
 from app.api.health import ReadinessPort
 from app.api.health import router as health_router
+from app.api.mcp import McpApiDependencies
+from app.api.mcp import router as mcp_router
 from app.config import Settings, get_settings
 from app.db.health import DependencyReadiness
 from app.errors import install_error_handlers
@@ -41,6 +43,8 @@ def create_app(
     enable_approvals: bool = True,
     auth: AuthDependencies | None = None,
     enable_auth: bool = True,
+    mcp: McpApiDependencies | None = None,
+    enable_mcp: bool = True,
 ) -> FastAPI:
     active_settings = settings or get_settings()
     configure_logging(
@@ -91,6 +95,12 @@ def create_app(
         app.state.approvals = composed
         app.include_router(approvals_router)
 
+    # The tool surface is feature-disabled independently of policy and approvals,
+    # so packet §17's "disable write tools first" is a flag rather than a deploy.
+    if enable_mcp:
+        app.state.mcp = mcp or _default_mcp(active_settings)
+        app.include_router(mcp_router)
+
     return app
 
 
@@ -108,6 +118,14 @@ def _default_auth(settings: Settings) -> AuthDependencies:
         settings=settings,
         clock=lambda: datetime.now(UTC),
     )
+
+
+def _default_mcp(settings: Settings) -> McpApiDependencies:
+    from app.db import build_engine, build_session_factory
+    from app.mcp.wiring import build_gateway
+
+    sessions = build_session_factory(build_engine(settings.database_url))
+    return McpApiDependencies(gateway=build_gateway(sessions, settings))
 
 
 def _default_approvals(settings: Settings) -> ApprovalApiDependencies:

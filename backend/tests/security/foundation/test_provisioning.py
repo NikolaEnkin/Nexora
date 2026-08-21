@@ -90,8 +90,8 @@ def test_controlled_provisioning_and_foundation_invariants() -> None:
                 ORDER BY roles.name, permissions.permission_key"""
             )
         ).all()
-        # 16 = OWNER 7 + OPERATOR 3 + VIEWER 2 + DEPUTY 4 (amendment A-6).
-        assert len(mappings) == 16
+        # 22 = OWNER 9 + OPERATOR 5 + VIEWER 3 + DEPUTY 5 (A-6, then Phase 04 clients).
+        assert len(mappings) == 22
         by_role: dict[str, set[str]] = {}
         for role_name, permission_key in mappings:
             by_role.setdefault(role_name, set()).add(permission_key)
@@ -101,6 +101,9 @@ def test_controlled_provisioning_and_foundation_invariants() -> None:
         assert "membership.manage" not in by_role["DEPUTY"]
         # A VIEWER may still approve nothing.
         assert not any(key.startswith("approval.") for key in by_role["VIEWER"])
+        # A VIEWER may read a client but never write one.
+        assert "client.read" in by_role["VIEWER"]
+        assert "client.write" not in by_role["VIEWER"]
         for table in (
             "foundation_mutations",
             "domain_events",

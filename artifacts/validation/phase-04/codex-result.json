@@ -431,7 +431,7 @@
     {
       "path": "artifacts/validation/phase-04/REVIEW.md",
       "purpose": "phase review summary, amendments A-4 and A-5, findings and open items for Nikola",
-      "sha256": "f78aec59e9a7fa1cc4b00a69daab5e7947088cfe6675dadfcfc32e5ce3e40fc8"
+      "sha256": "cdde66b50cd216c893637ae3d1c903b1849ab756fbc21f0dab2e184504619f2b"
     },
     {
       "path": "artifacts/validation/phase-04/automated-tests.log",
@@ -460,7 +460,7 @@
     {
       "path": "artifacts/validation/phase-04/human-uat.md",
       "purpose": "the exact UAT Nikola still owns, reduced by amendment A-4",
-      "sha256": "3cf539bc1fa47232a89ee2f93716d45dad46c4db8329377ad40606c177495531"
+      "sha256": "313726d5d1764dcb0e7cc60aecf0c5f35f023b563522c8b7e4899fdf6764cf63"
     },
     {
       "path": "artifacts/validation/phase-04/manifest-commands.log",

@@ -19,10 +19,12 @@ import unicodedata
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Literal
-from uuid import UUID
+from uuid import UUID, uuid5
 
+import structlog
 from pydantic import Field
 from sqlalchemy import RowMapping, text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.audit import safe_audit_metadata
@@ -163,6 +165,27 @@ _INSERT_AUDIT = text(
         'AUTHORIZED', :correlation_id, CAST(:metadata AS jsonb), 1, :now
     ) ON CONFLICT DO NOTHING"""
 )
+# Packet §8: `client_get` owes "read correlation/audit". The write statement above
+# hardcodes SUCCEEDED/AUTHORIZED, which is correct for a mutation that only exists
+# once it has committed; a read has to record refusals too, so its result and
+# reason are parameters. Kept as a second statement rather than by loosening the
+# first, so no write can accidentally record itself as anything but SUCCEEDED.
+_INSERT_READ_AUDIT = text(
+    """INSERT INTO audit_events (
+        id, tenant_id, actor_id, action, target_type, target_id, result, reason,
+        correlation_id, metadata, contract_version, occurred_at
+    ) VALUES (
+        :id, :tenant_id, :actor_id, 'client.read', 'client', :target_id, :result,
+        :reason, :correlation_id, CAST(:metadata AS jsonb), 1, :now
+    ) ON CONFLICT DO NOTHING"""
+)
+
+# A read audit must name a target, and `audit_events.target_id` is NOT NULL. A
+# lookup by name has no client to point at — and may deliberately have found
+# nothing — so the reference is derived from the normalized key that was asked
+# for. Two probes for the same name share a reference; the name itself never
+# enters the audit row.
+_READ_TARGET_NAMESPACE = UUID("70000000-0000-0000-0000-000000000006")
 
 
 def _to_record(row: RowMapping) -> ClientRecord:
@@ -186,12 +209,32 @@ class ClientService:
     # -- reads -----------------------------------------------------------
 
     def get(
-        self, *, actor: ActorContext, client_id: UUID | None = None, legal_name: str | None = None
+        self,
+        *,
+        actor: ActorContext,
+        now: datetime,
+        client_id: UUID | None = None,
+        legal_name: str | None = None,
     ) -> ClientRecord:
-        """Resolve by exact id or exact normalized key. Never both, never neither."""
-        self._require(actor, "client.read")
+        """Resolve by exact id or exact normalized key. Never both, never neither.
+
+        Every outcome is audited, including the refusals. A read that found
+        nothing and a read that was not permitted are the two events an
+        investigator most wants afterwards, and they are exactly the two that
+        leave no other trace.
+        """
         if (client_id is None) == (legal_name is None):
+            # Malformed rather than an access event: nothing was looked up and no
+            # authorization question was answered, so there is nothing to audit.
             raise BusinessRuleViolation("exactly one of client_id or legal_name is required")
+
+        target = self._read_target(actor, client_id, legal_name)
+        decision = authorize(
+            actor, "client.read", object_tenant_id=actor.tenant_id, object_scope="client"
+        )
+        if decision.effect is not AuthorizationEffect.ALLOW:
+            self._audit_read(actor, target, result="DENIED", reason=decision.reason_code, now=now)
+            raise AuthorizationDenied
 
         with self.sessions() as session, session.begin():
             set_request_context(session, actor.tenant_id, actor.actor_id)
@@ -209,9 +252,94 @@ class ClientService:
                     # revision relaxes that index.
                     raise AmbiguousEntity
                 row = rows[0] if rows else None
+            if row is not None:
+                # Inside the read's own transaction, so a committed audit row can
+                # never describe a read whose snapshot was rolled back. Safe to do
+                # here precisely because a returned row proves the RLS context was
+                # accepted, so the insert cannot be refused.
+                self._audit_read(
+                    actor,
+                    target,
+                    result="SUCCEEDED",
+                    reason="AUTHORIZED",
+                    now=now,
+                    session=session,
+                )
         if row is None:
+            # Deliberately its own transaction. "Found nothing" has two causes:
+            # the client does not exist, or the caller's context is not a member
+            # of an active tenant at all. The second makes the audit insert fail
+            # the RLS `WITH CHECK`, which would abort the read's transaction and
+            # surface as a database error — telling the caller apart from the
+            # first case. `ClientNotFound` is raised either way.
+            self._audit_read(actor, target, result="NOT_FOUND", reason="CLIENT_NOT_FOUND", now=now)
             raise ClientNotFound
         return _to_record(row)
+
+    @staticmethod
+    def _read_target(actor: ActorContext, client_id: UUID | None, legal_name: str | None) -> UUID:
+        if client_id is not None:
+            return client_id
+        return uuid5(_READ_TARGET_NAMESPACE, f"{actor.tenant_id}:{normalize_key(legal_name or '')}")
+
+    def _audit_read(
+        self,
+        actor: ActorContext,
+        target: UUID,
+        *,
+        result: str,
+        reason: str,
+        now: datetime,
+        session: Session | None = None,
+    ) -> None:
+        """Record one read attempt.
+
+        `session` is passed when the caller already holds the read's transaction;
+        a refusal has none, so one is opened. The id is derived the same way
+        `ApprovalAuditLog` derives its own — deterministic, and distinct per
+        instant, so a test can predict it while two reads a second apart remain
+        two rows. Only reads that are identical *down to the instant* collapse,
+        which is the same rule the approval audit already uses; anything coarser
+        would hide the repetition an enumeration attempt consists of.
+
+        When this opens its own transaction, an RLS refusal is caught and logged
+        rather than raised. It means one thing only — the context is not an
+        active user of an active tenant — and in that case the caller is already
+        raising a non-disclosing refusal. Letting the database error escape would
+        replace that refusal with a distinguishable one. The catch is narrow: one
+        statement, one exception type, and the event is never silent.
+        """
+        parameters = {
+            "id": uuid5(
+                _READ_TARGET_NAMESPACE,
+                f"audit:{actor.tenant_id}:{actor.actor_id}:{target}:{result}:{now}",
+            ),
+            "tenant_id": actor.tenant_id,
+            "actor_id": actor.actor_id,
+            "target_id": target,
+            "result": result,
+            "reason": reason[:100],
+            "correlation_id": actor.correlation_id,
+            "metadata": canonical_json(
+                safe_audit_metadata({"operation": "client.read", "outcome": result})
+            ),
+            "now": now,
+        }
+        if session is not None:
+            session.execute(_INSERT_READ_AUDIT, parameters)
+            return
+        try:
+            with self.sessions() as own, own.begin():
+                set_request_context(own, actor.tenant_id, actor.actor_id)
+                own.execute(_INSERT_READ_AUDIT, parameters)
+        except DBAPIError:
+            structlog.get_logger("client-read-audit").warning(
+                "read_audit_refused",
+                tenant_id=str(actor.tenant_id),
+                actor_id=str(actor.actor_id),
+                outcome=result,
+                reason="context is not an active member of an active tenant",
+            )
 
     # -- writes ----------------------------------------------------------
 
@@ -276,7 +404,9 @@ class ClientService:
     ) -> tuple[ClientRecord, bool]:
         """Patch a client under an optimistic version check (`BR-04-004`)."""
         self._require(actor, "client.write")
-        current = self.get(actor=actor, client_id=client_id)
+        # Audited like any other read: the update genuinely read this row, and a
+        # write that turns out to be a no-op should still show what it looked at.
+        current = self.get(actor=actor, now=now, client_id=client_id)
         if current.row_version != expected_version:
             raise VersionConflict
 

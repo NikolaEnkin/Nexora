@@ -609,6 +609,13 @@ def _clear_fixture_rows(url: str) -> None:
 
     Only ever reached after `_guard_local_database` has proved this is the exact
     local fixture identity and the destructive opt-in is present.
+
+    Every revision whose `downgrade` refuses on live *data* must be represented
+    here, or `main`'s hermetic claim is false and the check passes only on a
+    database nobody has used. Phase 02 refuses while an operation is active,
+    Phase 03 while an approval is non-terminal, and Phase 04 while a client
+    exists — the last of which turned a working command into a failing one as
+    soon as the system was driven by hand.
     """
     engine = create_engine(url)
     with engine.begin() as connection:
@@ -623,6 +630,24 @@ def _clear_fixture_rows(url: str) -> None:
                     nexora_agent.agent_operations CASCADE"""
                 )
             )
+        # `TRUNCATE` is used rather than `DELETE` on purpose: the append-only
+        # triggers on the approval history are `FOR EACH ROW` on `DELETE`, and
+        # they must keep refusing a delete. `TRUNCATE` is a different statement
+        # and does not fire them, so the guarantee they exist to give is not
+        # weakened here. Each table is cleared only if the revision that creates
+        # it has been applied.
+        guarded = (
+            "approval_consumptions",
+            "approval_decisions",
+            "approval_requests",
+            "clients",
+        )
+        for table in guarded:
+            present = connection.execute(
+                text("SELECT to_regclass(:name) IS NOT NULL"), {"name": f"public.{table}"}
+            ).scalar_one()
+            if present:
+                connection.execute(text(f"TRUNCATE TABLE public.{table} CASCADE"))
 
 
 def _assert_phase03_boundary(url: str) -> None:

@@ -1,0 +1,18 @@
+OK  exit=0 P04-AUTH-001: 14 passed in 2.41s
+      pytest -q backend/tests/security/auth/test_session_boundary.py
+OK  exit=0 P04-AUTH-002: 6 passed, 8 deselected in 1.03s
+      pytest -q backend/tests/security/auth/test_session_boundary.py -k 'csrf or origin'
+OK  exit=0 P04-AUTH-003: 3 passed, 11 deselected in 0.57s
+      pytest -q backend/tests/security/auth/test_session_boundary.py -k production
+OK  exit=0 P04-AUTH-004: 20 passed in 2.43s
+      pytest -q backend/tests/security/auth/test_step_up.py
+OK  exit=0 P04-001: 1 passed in 0.19s
+      pytest -q backend/tests/contract/mcp/test_tool_catalogue.py::test_exact_closed_v1_catalogue
+OK  exit=0 P04-002: 3 passed, 10 deselected in 0.64s
+      pytest -q backend/tests/security/mcp/test_tool_boundary.py -k 'generic_or_unknown or forged_audience or undeclared_argument'
+OK  exit=0 P04-003: 2 passed, 11 deselected in 0.54s
+      pytest -q backend/tests/security/mcp/test_tool_boundary.py -k 'foreign_tenant or unauthorized_actor'
+OK  exit=0 P04-004: 1 passed in 0.46s
+      pytest -q backend/tests/integration/mcp/test_client_tools.py::test_ten_identical_calls_produce_one_client
+
+8 manifest commands, 0 non-zero

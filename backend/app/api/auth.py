@@ -43,7 +43,11 @@ from app.config import Settings
 from app.contracts import ActorContext
 from app.contracts.foundation import FrozenContract
 from app.errors import ApplicationError, AuthenticationRequired
-from app.identity.session import SESSION_COOKIE_NAME, validate_csrf_and_origin
+from app.identity.session import (
+    SESSION_COOKIE_NAME,
+    STEP_UP_WINDOW,
+    validate_csrf_and_origin,
+)
 from app.identity.session_store import PostgresSessionStore
 from app.identity.step_up import (
     StepUpFactor,
@@ -294,7 +298,14 @@ async def logout(request: Request) -> Response:
     if raw_token is not None:
         dependencies.store.revoke(raw_token, actor.actor_id, dependencies.clock())
     response = JSONResponse(status_code=status.HTTP_200_OK, content={"version": "1"})
-    response.delete_cookie(SESSION_COOKIE_NAME, path="/")
+    # The deletion must carry the same attributes as the cookie it deletes. A
+    # `__Host-` prefixed cookie is rejected outright by the browser unless it is
+    # `Secure` and `Path=/`, so a bare `delete_cookie` is *ignored* and the dead
+    # token stays in the jar. Revocation above is the real control and already
+    # happened; this makes the browser agree.
+    response.delete_cookie(
+        SESSION_COOKIE_NAME, path="/", secure=True, httponly=True, samesite="lax"
+    )
     return response
 
 
@@ -353,7 +364,10 @@ async def step_up(request: Request) -> Response:
             "assurance": "step_up",
             "factor": evidence.factor.value,
             "required_factor": required_factor(actor.roles).value,
-            "window_minutes": 5,
+            # Read from the constant the derivation actually uses. A literal here
+            # would keep answering "5" after someone shortened the window, and a
+            # client would believe it had time it does not have.
+            "window_seconds": int(STEP_UP_WINDOW.total_seconds()),
         },
     )
 

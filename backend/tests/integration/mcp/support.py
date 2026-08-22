@@ -98,6 +98,7 @@ def build_mcp_harness(*, pool_size: int = 5) -> McpHarness:
         clients=clients,
         policy_gate=approvals.gate,
         clock=approvals.clock,
+        limiter=approvals.gate.limiter,
     )
     return McpHarness(
         approvals=approvals,
@@ -162,6 +163,26 @@ def _stored_hash(harness: McpHarness, actor: ActorContext, approval_id: UUID) ->
     request = harness.approvals.repository.load(actor=actor, approval_id=approval_id)
     assert request is not None
     return request.payload_hash
+
+
+def read_audits(harness: McpHarness, actor: ActorContext) -> list[tuple[str, str]]:
+    """Every `client.read` audit row this tenant has, oldest first.
+
+    Packet §8 gives `client_get` a read audit. Asserting on the rows rather than
+    on a count is what makes the difference between "something was written" and
+    "the refusal was recorded as a refusal".
+    """
+    with harness.sessions() as session, session.begin():
+        set_request_context(session, actor.tenant_id, actor.actor_id)
+        return [
+            (str(row[0]), str(row[1]))
+            for row in session.execute(
+                text(
+                    """SELECT result, reason FROM audit_events
+                    WHERE action = 'client.read' ORDER BY occurred_at, result"""
+                )
+            )
+        ]
 
 
 def counts(harness: McpHarness, actor: ActorContext) -> dict[str, int]:

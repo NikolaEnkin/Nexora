@@ -1,0 +1,4 @@
+$ make test-contract
+.........................................                                [100%]
+41 passed, 272 deselected in 3.84s
+exit=0

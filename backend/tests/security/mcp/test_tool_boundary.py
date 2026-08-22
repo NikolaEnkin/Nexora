@@ -13,12 +13,14 @@ from app.approvals.errors import ApprovalRequired
 from app.contracts import ActorContext
 from app.mcp.contracts import ToolAudience, ToolOutcome
 from app.mcp.gateway import ToolNotAllowed, ToolSchemaInvalid
+from app.policy.catalogue import CATALOGUE, rate_limit_for
 from tests.integration.foundation.support import TENANT_A
 from tests.integration.mcp.support import (
     build_mcp_harness,
     counts,
     envelope,
     operator,
+    read_audits,
     viewer,
 )
 
@@ -195,10 +197,16 @@ def test_a_protected_write_requires_a_human_decision_first() -> None:
 
 
 def test_a_read_needs_no_approval() -> None:
-    """`client_get` is R1: authorization is enough, and it writes nothing."""
+    """`client_get` is R1: authorization is enough, and it changes no business row.
+
+    It is not, however, silent. Packet §8 gives the read an audit, so the correct
+    assertion is "zero business effect **and** exactly one recorded read" — not
+    "nothing happened", which would also pass if the audit had been dropped.
+    """
     harness = build_mcp_harness()
     actor = operator(1)
     before = counts(harness, actor)
+    assert read_audits(harness, actor) == []
 
     result = harness.gateway.call(
         actor=actor,
@@ -209,7 +217,71 @@ def test_a_read_needs_no_approval() -> None:
     assert result.outcome is ToolOutcome.FAILED
     assert result.error is not None
     assert result.error.code == "CLIENT_NOT_FOUND"
-    assert counts(harness, actor) == before
+    after = counts(harness, actor)
+    assert {key: after[key] for key in ("clients", "domain_events", "outbox_events")} == {
+        key: before[key] for key in ("clients", "domain_events", "outbox_events")
+    }
+    assert read_audits(harness, actor) == [("NOT_FOUND", "CLIENT_NOT_FOUND")]
+
+
+def test_a_refused_read_is_recorded_as_a_refusal() -> None:
+    """A caller without `client.read` leaves a DENIED row and touches nothing else.
+
+    An unauthorized read is the event that otherwise leaves no trace at all: it
+    writes no client, no event and no outbox entry, so without this row it never
+    happened as far as an investigator is concerned.
+    """
+    harness = build_mcp_harness()
+    unprivileged = ActorContext(
+        tenant_id=TENANT_A,
+        actor_id=operator(1).actor_id,
+        subject="auth0|operator-1",
+        auth_method="test_fixture",
+        roles=("OPERATOR",),
+        permissions=("client.write",),  # write, deliberately without read
+        correlation_id=uuid4(),
+    )
+    before = counts(harness, operator(1))
+
+    result = harness.gateway.call(
+        actor=unprivileged,
+        envelope=envelope("client_get", {"client_id": str(uuid4())}),
+        authenticated_audience=ToolAudience.AGENT,
+    )
+
+    assert result.outcome is ToolOutcome.DENIED
+    after = counts(harness, operator(1))
+    assert {key: after[key] for key in ("clients", "domain_events", "outbox_events")} == {
+        key: before[key] for key in ("clients", "domain_events", "outbox_events")
+    }
+    assert read_audits(harness, operator(1)) == [("DENIED", "PERMISSION_MISSING")]
+
+
+def test_a_read_is_rate_limited_like_every_other_tool() -> None:
+    """Packet §12 — a limit per actor and tool, including the one read tool.
+
+    Reads never enter the Phase-03 gate, which is where writes are limited, so
+    this is the path that was unbounded. The limit is the R1 tier from the
+    accepted `ADR-004` catalogue, not a number chosen at the boundary.
+    """
+    harness = build_mcp_harness()
+    actor = operator(1)
+    limit = rate_limit_for(CATALOGUE["client_get"].risk)
+
+    outcomes = [
+        harness.gateway.call(
+            actor=actor,
+            envelope=envelope("client_get", {"client_id": str(uuid4())}),
+            authenticated_audience=ToolAudience.AGENT,
+        )
+        for _ in range(limit + 1)
+    ]
+
+    assert outcomes[-1].outcome is ToolOutcome.FAILED
+    assert outcomes[-1].error is not None
+    assert outcomes[-1].error.code == "RATE_LIMITED"
+    # And the refusal happened before the service: the last call left no audit.
+    assert len(read_audits(harness, actor)) == limit
 
 
 def test_resolution_never_guesses_between_two_references() -> None:

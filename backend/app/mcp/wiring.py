@@ -26,8 +26,12 @@ def build_gateway(
     *,
     clock: Callable[[], datetime] = _utc_now,
 ) -> McpGateway:
+    gate = build_gate(sessions, settings, clock=clock)
     return McpGateway(
         clients=ClientService(sessions=sessions),
-        policy_gate=build_gate(sessions, settings, clock=clock),
+        policy_gate=gate,
         clock=clock,
+        # The gate's own limiter, not a second one: two limiter instances would
+        # be two independent budgets for the same actor.
+        limiter=gate.limiter,
     )

@@ -31,7 +31,7 @@ from app.approvals.errors import ApprovalReplayed, ApprovalRequired
 from app.approvals.gate import ProtectedActionGate
 from app.business.clients.service import ClientService
 from app.contracts import ActorContext
-from app.errors import ApplicationError, AuthorizationDenied
+from app.errors import SAFE_DETAIL_KEYS, ApplicationError, AuthorizationDenied
 from app.mcp.contracts import (
     ToolAudience,
     ToolCallEnvelope,
@@ -40,7 +40,10 @@ from app.mcp.contracts import (
     ToolResult,
 )
 from app.mcp.registry import ToolDefinition, lookup, visible_to
+from app.policy.catalogue import lookup as catalogue_lookup
 from app.policy.contracts import ActionDescriptor
+from app.policy.errors import RateLimited
+from app.rate_limit import RateLimitPort
 
 IDEMPOTENCY_NAMESPACE = UUID("70000000-0000-0000-0000-000000000005")
 
@@ -73,6 +76,9 @@ class McpGateway:
     clients: ClientService
     policy_gate: ProtectedActionGate
     clock: Callable[[], datetime]
+    # Required, not optional. An optional limiter would mean a wiring mistake
+    # silently removes a control instead of failing to construct.
+    limiter: RateLimitPort
 
     def list_tools(self, *, audience: ToolAudience) -> tuple[ToolDefinition, ...]:
         """Discovery is audience-scoped. A forbidden tool is absent, not refused."""
@@ -133,10 +139,14 @@ class McpGateway:
                     code=error.code,
                     message=error.message,
                     retryable=error.retryable,
+                    # `app.errors.SAFE_DETAIL_KEYS`, not a second copy of it. A
+                    # local set was narrower and therefore harmless today, but
+                    # two allowlists for the same question drift, and only one of
+                    # them gets reviewed when a key is added.
                     details={
                         key: value
                         for key, value in error.details.items()
-                        if key in {"rule", "reason", "supported_major"}
+                        if key in SAFE_DETAIL_KEYS
                     },
                 ),
             )
@@ -158,8 +168,17 @@ class McpGateway:
         arguments = envelope.typed_arguments
 
         if tool.name == "client_get":
+            # Packet §12 requires a rate limit per actor and tool for *every*
+            # tool. A read never enters the Phase-03 gate, which is where the
+            # limiter runs for writes, so it would otherwise be the one unbounded
+            # path — and it is now also the path that appends an audit row per
+            # call. Writes are deliberately not limited here as well: the gate
+            # limits them a moment later, and limiting twice would silently halve
+            # the rate the catalogue publishes.
+            self._enforce_read_rate_limit(actor, tool, now)
             record = self.clients.get(
                 actor=actor,
+                now=now,
                 client_id=UUID(arguments["client_id"]) if "client_id" in arguments else None,
                 legal_name=arguments.get("legal_name"),
             )
@@ -217,6 +236,27 @@ class McpGateway:
         return self._succeeded(
             envelope, tool, record.model_dump(mode="json"), record.row_version, replayed=replayed
         )
+
+    def _enforce_read_rate_limit(
+        self, actor: ActorContext, tool: ToolDefinition, now: datetime
+    ) -> None:
+        """The same limiter, the same catalogue risk, as a write would get.
+
+        The risk is read from `app.policy.catalogue` rather than from a number
+        chosen here, for the reason the registry gives: a second classification
+        is a classification that can drift from the accepted one.
+        """
+        entry = catalogue_lookup(tool.name)
+        risk = entry.risk if entry is not None else tool.risk
+        verdict = self.limiter.check(
+            tenant_id=actor.tenant_id,
+            actor_id=actor.actor_id,
+            operation=tool.name,
+            risk=risk,
+            now=now,
+        )
+        if not verdict.allowed:
+            raise RateLimited(verdict.retry_after_seconds)
 
     @staticmethod
     def _target_id(

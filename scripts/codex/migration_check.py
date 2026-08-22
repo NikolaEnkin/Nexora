@@ -52,8 +52,12 @@ PHASE_03_HEAD = "0003_policy_approval"
 # Newest first, matching `walk_revisions`. Extended additively in Phase 03 under
 # amendment A-1: every Phase-01 and Phase-02 assertion below is unchanged, and the
 # chain simply grew by one revision.
-MIGRATION_CHAIN = [PHASE_03_HEAD, PHASE_02_HEAD, PHASE_01_HEAD]
-CURRENT_HEAD = PHASE_03_HEAD
+PHASE_04_HEAD = "0004_business_domain"
+# Step-up gets its own revision: a session column has no business in a migration
+# named `business_domain`.
+STEP_UP_HEAD = "0005_session_step_up"
+MIGRATION_CHAIN = [STEP_UP_HEAD, PHASE_04_HEAD, PHASE_03_HEAD, PHASE_02_HEAD, PHASE_01_HEAD]
+CURRENT_HEAD = STEP_UP_HEAD
 
 # Phase 03 changes the public catalog on purpose (amendment A-2). This pins the new
 # shape so an *unintended* further change is still caught.
@@ -84,6 +88,19 @@ PHASE_03_FUNCTIONS = frozenset(
         "protect_approval_request_state",
         "reject_approval_history_change",
     }
+)
+
+# Phase 04 adds `clients` only. The offer, invoice and payment tables from packet
+# §9 are absent on purpose: HD-004 is unresolved, and a placeholder would be the
+# guessed default packet §8 forbids. When ADR-005 is accepted they arrive in their
+# own revision and this set grows again.
+PHASE_04_TABLES = PHASE_03_TABLES | {"clients"}
+PHASE_04_TENANT_TABLES = PHASE_03_TENANT_TABLES | {"clients"}
+PHASE_04_TRIGGERS = PHASE_03_TRIGGERS | {"trg_clients_protect_identity"}
+PHASE_04_FUNCTIONS = PHASE_03_FUNCTIONS | {"protect_client_identity", "protect_session_step_up"}
+PHASE_04_TRIGGERS = PHASE_04_TRIGGERS | {"trg_auth_sessions_protect_step_up"}
+EXPECTED_PHASE_04_CATALOG_SHA256 = (
+    "e99cb83d697c3069a8b70b6520b47b25735943fe41f929a4670d069fe4871bb5"
 )
 
 AGENT_SCHEMA = "nexora_agent"
@@ -592,6 +609,13 @@ def _clear_fixture_rows(url: str) -> None:
 
     Only ever reached after `_guard_local_database` has proved this is the exact
     local fixture identity and the destructive opt-in is present.
+
+    Every revision whose `downgrade` refuses on live *data* must be represented
+    here, or `main`'s hermetic claim is false and the check passes only on a
+    database nobody has used. Phase 02 refuses while an operation is active,
+    Phase 03 while an approval is non-terminal, and Phase 04 while a client
+    exists — the last of which turned a working command into a failing one as
+    soon as the system was driven by hand.
     """
     engine = create_engine(url)
     with engine.begin() as connection:
@@ -606,6 +630,24 @@ def _clear_fixture_rows(url: str) -> None:
                     nexora_agent.agent_operations CASCADE"""
                 )
             )
+        # `TRUNCATE` is used rather than `DELETE` on purpose: the append-only
+        # triggers on the approval history are `FOR EACH ROW` on `DELETE`, and
+        # they must keep refusing a delete. `TRUNCATE` is a different statement
+        # and does not fire them, so the guarantee they exist to give is not
+        # weakened here. Each table is cleared only if the revision that creates
+        # it has been applied.
+        guarded = (
+            "approval_consumptions",
+            "approval_decisions",
+            "approval_requests",
+            "clients",
+        )
+        for table in guarded:
+            present = connection.execute(
+                text("SELECT to_regclass(:name) IS NOT NULL"), {"name": f"public.{table}"}
+            ).scalar_one()
+            if present:
+                connection.execute(text(f"TRUNCATE TABLE public.{table} CASCADE"))
 
 
 def _assert_phase03_boundary(url: str) -> None:
@@ -696,6 +738,68 @@ def _assert_phase03_boundary(url: str) -> None:
                 raise AssertionError(f"permission {permission_key} is missing")
 
 
+def _assert_phase04_boundary(url: str) -> None:
+    """Assert the Phase-04 client boundary directly against PostgreSQL."""
+    engine = create_engine(url)
+    with engine.connect() as connection:
+        forced = connection.execute(
+            text(
+                """SELECT relrowsecurity AND relforcerowsecurity FROM pg_class
+                WHERE relnamespace = 'public'::regnamespace AND relname = 'clients'"""
+            )
+        ).scalar_one()
+        if not forced:
+            raise AssertionError("clients lacks ENABLE/FORCE row-level security")
+
+        deletes = (
+            connection.execute(
+                text(
+                    """SELECT privilege_type FROM information_schema.role_table_grants
+                    WHERE grantee = 'nexora_runtime' AND table_name = 'clients'
+                      AND privilege_type = 'DELETE'"""
+                )
+            )
+            .scalars()
+            .all()
+        )
+        if deletes:
+            raise AssertionError("nexora_runtime holds DELETE on clients")
+
+        unique = connection.execute(
+            text(
+                """SELECT indexdef FROM pg_indexes
+                WHERE tablename = 'clients' AND indexname = 'uq_clients_active_identity'"""
+            )
+        ).scalar_one_or_none()
+        if unique is None or "ACTIVE" not in unique:
+            raise AssertionError("the active client identity index is missing or not partial")
+
+        # The financial tables must NOT exist yet: HD-004 is unresolved.
+        premature = (
+            connection.execute(
+                text(
+                    """SELECT tablename FROM pg_tables WHERE schemaname = 'public'
+                    AND tablename = ANY(:tables)"""
+                ),
+                {"tables": ["offers", "offer_items", "invoices", "invoice_items", "payments"]},
+            )
+            .scalars()
+            .all()
+        )
+        if premature:
+            raise AssertionError(
+                f"financial tables exist while HD-004 is unresolved: {sorted(premature)}"
+            )
+
+        for permission_key in ("client.read", "client.write"):
+            exists = connection.execute(
+                text("SELECT count(*) FROM permissions WHERE permission_key = :key"),
+                {"key": permission_key},
+            ).scalar_one()
+            if not exists:
+                raise AssertionError(f"permission {permission_key} is missing")
+
+
 def main() -> None:
     url = get_migration_settings().migration_database_url
     _guard_local_database(url)
@@ -737,34 +841,50 @@ def main() -> None:
     # Phase 03 deliberately renegotiates the public catalog (amendment A-2:
     # ADR-004 requires a DEPUTY role that ck_roles_name forbids). The new shape is
     # pinned by its own hash, so an *unintended* further change still fails.
-    _alembic("upgrade", "head")
-    first = _snapshot(
+    _alembic("upgrade", PHASE_03_HEAD)
+    phase03 = _snapshot(
         url,
-        CURRENT_HEAD,
+        PHASE_03_HEAD,
         expected_tables=frozenset(PHASE_03_TABLES),
         tenant_tables=frozenset(PHASE_03_TENANT_TABLES),
         extra_triggers=PHASE_03_TRIGGERS,
         extra_functions=PHASE_03_FUNCTIONS,
     )
+    phase03_hash = _catalog_hash(phase03)
+    if phase03_hash != EXPECTED_PHASE_03_CATALOG_SHA256:
+        raise AssertionError(
+            f"catalog differs from the Phase-03 schema contract: actual={phase03_hash}"
+        )
+
+    _alembic("upgrade", "head")
+    first = _snapshot(
+        url,
+        CURRENT_HEAD,
+        expected_tables=frozenset(PHASE_04_TABLES),
+        tenant_tables=frozenset(PHASE_04_TENANT_TABLES),
+        extra_triggers=PHASE_04_TRIGGERS,
+        extra_functions=PHASE_04_FUNCTIONS,
+    )
     first_agent = _agent_snapshot(url)
     first_hash = _catalog_hash(first)
-    if first_hash != EXPECTED_PHASE_03_CATALOG_SHA256:
+    if first_hash != EXPECTED_PHASE_04_CATALOG_SHA256:
         raise AssertionError(
-            f"catalog differs from the Phase-03 schema contract: actual={first_hash}"
+            f"catalog differs from the Phase-04 schema contract: actual={first_hash}"
         )
     if first_agent != phase02_agent:
-        raise AssertionError("Phase 03 mutated the Phase-02 agent schema")
+        raise AssertionError("a later phase mutated the Phase-02 agent schema")
     _assert_phase03_boundary(url)
+    _assert_phase04_boundary(url)
 
     _alembic("upgrade", "head")
     if (
         _snapshot(
             url,
             CURRENT_HEAD,
-            expected_tables=frozenset(PHASE_03_TABLES),
-            tenant_tables=frozenset(PHASE_03_TENANT_TABLES),
-            extra_triggers=PHASE_03_TRIGGERS,
-            extra_functions=PHASE_03_FUNCTIONS,
+            expected_tables=frozenset(PHASE_04_TABLES),
+            tenant_tables=frozenset(PHASE_04_TENANT_TABLES),
+            extra_triggers=PHASE_04_TRIGGERS,
+            extra_functions=PHASE_04_FUNCTIONS,
         ),
         _agent_snapshot(url),
     ) != (first, first_agent):
@@ -776,19 +896,20 @@ def main() -> None:
         _snapshot(
             url,
             CURRENT_HEAD,
-            expected_tables=frozenset(PHASE_03_TABLES),
-            tenant_tables=frozenset(PHASE_03_TENANT_TABLES),
-            extra_triggers=PHASE_03_TRIGGERS,
-            extra_functions=PHASE_03_FUNCTIONS,
+            expected_tables=frozenset(PHASE_04_TABLES),
+            tenant_tables=frozenset(PHASE_04_TENANT_TABLES),
+            extra_triggers=PHASE_04_TRIGGERS,
+            extra_functions=PHASE_04_FUNCTIONS,
         ),
         _agent_snapshot(url),
     ) != (first, first_agent):
         raise AssertionError("downgrade/upgrade recovery produced catalog drift")
 
     print(
-        f"migration-check: {PHASE_01_HEAD} -> {PHASE_02_HEAD} -> {CURRENT_HEAD}, no drift, "
+        f"migration-check: {PHASE_01_HEAD} -> {PHASE_02_HEAD} -> {PHASE_03_HEAD} -> "
+        f"{CURRENT_HEAD}, no drift, "
         "Phase-01 catalog reproduced, Phase-02 agent schema unchanged, "
-        "Phase-03 approval RLS/grants verified"
+        "Phase-03 approval and Phase-04 client RLS/grants verified"
     )
 
 

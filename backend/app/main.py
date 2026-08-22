@@ -5,9 +5,13 @@ from fastapi import FastAPI, Request
 from app.agent.wiring import AgentComposition, build_agent_composition
 from app.api.approvals import ApprovalApiDependencies
 from app.api.approvals import router as approvals_router
+from app.api.auth import AuthDependencies, SessionAuthenticationMiddleware
+from app.api.auth import router as auth_router
 from app.api.chat import router as chat_router
 from app.api.health import ReadinessPort
 from app.api.health import router as health_router
+from app.api.mcp import McpApiDependencies
+from app.api.mcp import router as mcp_router
 from app.config import Settings, get_settings
 from app.db.health import DependencyReadiness
 from app.errors import install_error_handlers
@@ -37,6 +41,10 @@ def create_app(
     enable_chat: bool = True,
     approvals: ApprovalApiDependencies | None = None,
     enable_approvals: bool = True,
+    auth: AuthDependencies | None = None,
+    enable_auth: bool = True,
+    mcp: McpApiDependencies | None = None,
+    enable_mcp: bool = True,
 ) -> FastAPI:
     active_settings = settings or get_settings()
     configure_logging(
@@ -60,6 +68,15 @@ def create_app(
         response.headers["X-Correlation-ID"] = request.state.correlation_id
         return response
 
+    # The authentication boundary is installed before any router, so
+    # `request.state.actor` is either a trusted ActorContext or absent by the time
+    # an endpoint runs. Nothing downstream assembles an actor from a request body.
+    if enable_auth:
+        auth_dependencies = auth or _default_auth(active_settings)
+        app.state.auth = auth_dependencies
+        app.add_middleware(SessionAuthenticationMiddleware, dependencies=auth_dependencies)
+        app.include_router(auth_router)
+
     install_error_handlers(app)
     app.include_router(health_router)
 
@@ -78,7 +95,44 @@ def create_app(
         app.state.approvals = composed
         app.include_router(approvals_router)
 
+    # The tool surface is feature-disabled independently of policy and approvals,
+    # so packet §17's "disable write tools first" is a flag rather than a deploy.
+    if enable_mcp:
+        app.state.mcp = mcp or _default_mcp(active_settings)
+        app.include_router(mcp_router)
+
     return app
+
+
+def _default_auth(settings: Settings) -> AuthDependencies:
+    from datetime import UTC, datetime
+
+    from app.db import build_engine, build_session_factory
+    from app.identity import PostgresSessionStore
+
+    sessions = build_session_factory(build_engine(settings.database_url))
+    clock = lambda: datetime.now(UTC)  # noqa: E731
+    verifier = None
+    if settings.environment in {"development", "test"} and settings.fake_identity_enabled:
+        from app.identity.step_up import FakeStepUpVerifier
+
+        verifier = FakeStepUpVerifier(settings=settings, clock=clock)
+    return AuthDependencies(
+        store=PostgresSessionStore(
+            sessions=sessions, pepper=settings.session_hash_pepper.get_secret_value()
+        ),
+        settings=settings,
+        clock=clock,
+        step_up=verifier,
+    )
+
+
+def _default_mcp(settings: Settings) -> McpApiDependencies:
+    from app.db import build_engine, build_session_factory
+    from app.mcp.wiring import build_gateway
+
+    sessions = build_session_factory(build_engine(settings.database_url))
+    return McpApiDependencies(gateway=build_gateway(sessions, settings))
 
 
 def _default_approvals(settings: Settings) -> ApprovalApiDependencies:

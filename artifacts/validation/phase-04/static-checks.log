@@ -1,0 +1,14 @@
+$ git diff --check
+exit=0
+
+$ make lint
+All checks passed!
+exit=0
+
+$ make format-check
+204 files already formatted
+exit=0
+
+$ make typecheck
+Success: no issues found in 77 source files
+exit=0

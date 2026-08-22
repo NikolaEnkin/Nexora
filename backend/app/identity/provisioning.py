@@ -21,6 +21,11 @@ PROVISIONING_NAMESPACE = UUID("80000000-0000-0000-0000-000000000001")
 # `membership.manage`. It is not a second OWNER. Assignment stays an OWNER-only
 # act, because only OWNER holds `membership.manage`, and the database enforces at
 # most one active DEPUTY per tenant.
+# Phase 04 adds the client permissions for the same reason Phase 03 added the
+# approval ones: migration 0004 backfills tenants that already exist, and without
+# this a tenant provisioned afterwards would have nobody who may read or write a
+# client. That gap was finding F-01 in Phase 03 and it recurs for every phase that
+# introduces a permission — the live run caught this one.
 ROLE_PERMISSIONS = {
     "OWNER": (
         "tenant.read",
@@ -30,10 +35,24 @@ ROLE_PERMISSIONS = {
         "audit.read",
         "approval.decide",
         "approval.decide.high",
+        "client.read",
+        "client.write",
     ),
-    "OPERATOR": ("tenant.read", "membership.read", "approval.decide"),
-    "VIEWER": ("tenant.read", "membership.read"),
-    "DEPUTY": ("tenant.read", "membership.read", "approval.decide", "approval.decide.high"),
+    "OPERATOR": (
+        "tenant.read",
+        "membership.read",
+        "approval.decide",
+        "client.read",
+        "client.write",
+    ),
+    "VIEWER": ("tenant.read", "membership.read", "client.read"),
+    "DEPUTY": (
+        "tenant.read",
+        "membership.read",
+        "approval.decide",
+        "approval.decide.high",
+        "client.read",
+    ),
 }
 
 

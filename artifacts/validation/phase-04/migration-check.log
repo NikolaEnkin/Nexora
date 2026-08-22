@@ -1,0 +1,107 @@
+$ make db-migrate-check  (run 1)
+ Container nexora-foundation-redis-1 Running 
+ Container nexora-foundation-postgres-1 Running 
+ Container nexora-foundation-redis-1 Waiting 
+ Container nexora-foundation-postgres-1 Waiting 
+ Container nexora-foundation-postgres-1 Healthy 
+ Container nexora-foundation-redis-1 Healthy 
+$ .venv/bin/alembic -c backend/alembic.ini downgrade base
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running downgrade 0005_session_step_up -> 0004_business_domain, Record when a session last proved a second factor.
+INFO  [alembic.runtime.migration] Running downgrade 0004_business_domain -> 0003_policy_approval, Create the Phase-04 business domain — clients only.
+INFO  [alembic.runtime.migration] Running downgrade 0003_policy_approval -> 0002_langgraph_checkpoint, Create the Phase-03 policy and approval boundary.
+INFO  [alembic.runtime.migration] Running downgrade 0002_langgraph_checkpoint -> 0001_foundation, Create the Phase-02 agent runtime coordination storage.
+INFO  [alembic.runtime.migration] Running downgrade 0001_foundation -> , Create Phase-01 authoritative foundation.
+$ .venv/bin/alembic -c backend/alembic.ini upgrade 0001_foundation
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_foundation, Create Phase-01 authoritative foundation.
+$ .venv/bin/alembic -c backend/alembic.ini upgrade 0002_langgraph_checkpoint
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade 0001_foundation -> 0002_langgraph_checkpoint, Create the Phase-02 agent runtime coordination storage.
+$ .venv/bin/alembic -c backend/alembic.ini upgrade 0003_policy_approval
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade 0002_langgraph_checkpoint -> 0003_policy_approval, Create the Phase-03 policy and approval boundary.
+$ .venv/bin/alembic -c backend/alembic.ini upgrade head
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade 0003_policy_approval -> 0004_business_domain, Create the Phase-04 business domain — clients only.
+INFO  [alembic.runtime.migration] Running upgrade 0004_business_domain -> 0005_session_step_up, Record when a session last proved a second factor.
+$ .venv/bin/alembic -c backend/alembic.ini upgrade head
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+$ .venv/bin/alembic -c backend/alembic.ini downgrade base
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running downgrade 0005_session_step_up -> 0004_business_domain, Record when a session last proved a second factor.
+INFO  [alembic.runtime.migration] Running downgrade 0004_business_domain -> 0003_policy_approval, Create the Phase-04 business domain — clients only.
+INFO  [alembic.runtime.migration] Running downgrade 0003_policy_approval -> 0002_langgraph_checkpoint, Create the Phase-03 policy and approval boundary.
+INFO  [alembic.runtime.migration] Running downgrade 0002_langgraph_checkpoint -> 0001_foundation, Create the Phase-02 agent runtime coordination storage.
+INFO  [alembic.runtime.migration] Running downgrade 0001_foundation -> , Create Phase-01 authoritative foundation.
+$ .venv/bin/alembic -c backend/alembic.ini upgrade head
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_foundation, Create Phase-01 authoritative foundation.
+INFO  [alembic.runtime.migration] Running upgrade 0001_foundation -> 0002_langgraph_checkpoint, Create the Phase-02 agent runtime coordination storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_langgraph_checkpoint -> 0003_policy_approval, Create the Phase-03 policy and approval boundary.
+INFO  [alembic.runtime.migration] Running upgrade 0003_policy_approval -> 0004_business_domain, Create the Phase-04 business domain — clients only.
+INFO  [alembic.runtime.migration] Running upgrade 0004_business_domain -> 0005_session_step_up, Record when a session last proved a second factor.
+migration-check: 0001_foundation -> 0002_langgraph_checkpoint -> 0003_policy_approval -> 0005_session_step_up, no drift, Phase-01 catalog reproduced, Phase-02 agent schema unchanged, Phase-03 approval and Phase-04 client RLS/grants verified
+exit=0
+
+$ make db-migrate-check  (run 2, consecutive)
+ Container nexora-foundation-redis-1 Running 
+ Container nexora-foundation-postgres-1 Running 
+ Container nexora-foundation-redis-1 Waiting 
+ Container nexora-foundation-postgres-1 Waiting 
+ Container nexora-foundation-redis-1 Healthy 
+ Container nexora-foundation-postgres-1 Healthy 
+$ .venv/bin/alembic -c backend/alembic.ini downgrade base
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running downgrade 0005_session_step_up -> 0004_business_domain, Record when a session last proved a second factor.
+INFO  [alembic.runtime.migration] Running downgrade 0004_business_domain -> 0003_policy_approval, Create the Phase-04 business domain — clients only.
+INFO  [alembic.runtime.migration] Running downgrade 0003_policy_approval -> 0002_langgraph_checkpoint, Create the Phase-03 policy and approval boundary.
+INFO  [alembic.runtime.migration] Running downgrade 0002_langgraph_checkpoint -> 0001_foundation, Create the Phase-02 agent runtime coordination storage.
+INFO  [alembic.runtime.migration] Running downgrade 0001_foundation -> , Create Phase-01 authoritative foundation.
+$ .venv/bin/alembic -c backend/alembic.ini upgrade 0001_foundation
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_foundation, Create Phase-01 authoritative foundation.
+$ .venv/bin/alembic -c backend/alembic.ini upgrade 0002_langgraph_checkpoint
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade 0001_foundation -> 0002_langgraph_checkpoint, Create the Phase-02 agent runtime coordination storage.
+$ .venv/bin/alembic -c backend/alembic.ini upgrade 0003_policy_approval
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade 0002_langgraph_checkpoint -> 0003_policy_approval, Create the Phase-03 policy and approval boundary.
+$ .venv/bin/alembic -c backend/alembic.ini upgrade head
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade 0003_policy_approval -> 0004_business_domain, Create the Phase-04 business domain — clients only.
+INFO  [alembic.runtime.migration] Running upgrade 0004_business_domain -> 0005_session_step_up, Record when a session last proved a second factor.
+$ .venv/bin/alembic -c backend/alembic.ini upgrade head
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+$ .venv/bin/alembic -c backend/alembic.ini downgrade base
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running downgrade 0005_session_step_up -> 0004_business_domain, Record when a session last proved a second factor.
+INFO  [alembic.runtime.migration] Running downgrade 0004_business_domain -> 0003_policy_approval, Create the Phase-04 business domain — clients only.
+INFO  [alembic.runtime.migration] Running downgrade 0003_policy_approval -> 0002_langgraph_checkpoint, Create the Phase-03 policy and approval boundary.
+INFO  [alembic.runtime.migration] Running downgrade 0002_langgraph_checkpoint -> 0001_foundation, Create the Phase-02 agent runtime coordination storage.
+INFO  [alembic.runtime.migration] Running downgrade 0001_foundation -> , Create Phase-01 authoritative foundation.
+$ .venv/bin/alembic -c backend/alembic.ini upgrade head
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_foundation, Create Phase-01 authoritative foundation.
+INFO  [alembic.runtime.migration] Running upgrade 0001_foundation -> 0002_langgraph_checkpoint, Create the Phase-02 agent runtime coordination storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_langgraph_checkpoint -> 0003_policy_approval, Create the Phase-03 policy and approval boundary.
+INFO  [alembic.runtime.migration] Running upgrade 0003_policy_approval -> 0004_business_domain, Create the Phase-04 business domain — clients only.
+INFO  [alembic.runtime.migration] Running upgrade 0004_business_domain -> 0005_session_step_up, Record when a session last proved a second factor.
+migration-check: 0001_foundation -> 0002_langgraph_checkpoint -> 0003_policy_approval -> 0005_session_step_up, no drift, Phase-01 catalog reproduced, Phase-02 agent schema unchanged, Phase-03 approval and Phase-04 client RLS/grants verified
+exit=0

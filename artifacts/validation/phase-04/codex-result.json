@@ -1,0 +1,537 @@
+{
+  "schema_version": "1.0.0",
+  "phase": "04",
+  "status": "READY_FOR_HUMAN_REVIEW",
+  "branch": "phase/04-mcp-business-tools",
+  "baseline_commit": "22565d63e69aac3b9644832958df3e216dfff3e7",
+  "commit": "7865ddb66658cff18da447c6bef8801c3589810c",
+  "changed_files": [
+    {
+      "path": "Makefile",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "PHASE_STATUS.md",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "artifacts/validation/phase-03/REVIEW.md",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "artifacts/validation/phase-04/REVIEW.md",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-04/automated-tests.log",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-04/changed-files.txt",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-04/code-attempts.md",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-04/contract-tests.log",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-04/human-uat.md",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-04/manifest-commands.log",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-04/migration-check.log",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-04/phase-review.log",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-04/reviewer.md",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-04/security-review.md",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-04/security-tests.log",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-04/static-checks.log",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "artifacts/validation/phase-04/test-audit.md",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/alembic/versions/0004_business_domain.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/alembic/versions/0005_session_step_up.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/api/auth.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/api/mcp.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/business/__init__.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/business/clients/__init__.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/business/clients/service.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/business/idempotency.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/config.py",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "backend/app/errors.py",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "backend/app/identity/__init__.py",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "backend/app/identity/provisioning.py",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "backend/app/identity/session.py",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "backend/app/identity/session_store.py",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "backend/app/identity/step_up.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/main.py",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "backend/app/mcp/__init__.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/mcp/contracts.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/mcp/gateway.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/mcp/registry.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/app/mcp/wiring.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/contract/mcp/test_mcp_api.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/contract/mcp/test_tool_catalogue.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/integration/mcp/support.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/integration/mcp/test_client_tools.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/security/auth/test_session_boundary.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/security/auth/test_step_up.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "backend/tests/security/foundation/test_db_roles.py",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "backend/tests/security/foundation/test_provisioning.py",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "backend/tests/security/mcp/test_tool_boundary.py",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "docs/adr/ADR-004-policy-and-approval.md",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "docs/execplans/phase-03.md",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "docs/execplans/phase-04.md",
+      "change": "created",
+      "allowlist_category": "MAY_CREATE"
+    },
+    {
+      "path": "pyproject.toml",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "scripts/codex/migration_check.py",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    },
+    {
+      "path": "tests/manifest.yaml",
+      "change": "modified",
+      "allowlist_category": "MAY_MODIFY"
+    }
+  ],
+  "commands": [
+    {
+      "command": "git status --short",
+      "attempt": 1,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-04/static-checks.log"
+    },
+    {
+      "command": "git diff --check",
+      "attempt": 1,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-04/static-checks.log"
+    },
+    {
+      "command": "make lint",
+      "attempt": 1,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-04/static-checks.log"
+    },
+    {
+      "command": "make format-check",
+      "attempt": 1,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-04/static-checks.log"
+    },
+    {
+      "command": "make typecheck",
+      "attempt": 1,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-04/static-checks.log"
+    },
+    {
+      "command": "make db-migrate-check",
+      "attempt": 1,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-04/migration-check.log"
+    },
+    {
+      "command": "make test-unit",
+      "attempt": 1,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-04/automated-tests.log"
+    },
+    {
+      "command": "make test-contract",
+      "attempt": 1,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-04/contract-tests.log"
+    },
+    {
+      "command": "make test-security",
+      "attempt": 1,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-04/security-tests.log"
+    },
+    {
+      "command": "make phase PHASE=04",
+      "attempt": 1,
+      "exit_code": 0,
+      "evidence_path": "artifacts/validation/phase-04/phase-review.log"
+    }
+  ],
+  "tests": [
+    {
+      "id": "P04-001",
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-04/contract-tests.log",
+      "negative_side_effect_count": 0
+    },
+    {
+      "id": "P04-002",
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-04/security-tests.log",
+      "negative_side_effect_count": 0
+    },
+    {
+      "id": "P04-003",
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-04/security-tests.log",
+      "negative_side_effect_count": 0
+    },
+    {
+      "id": "P04-004",
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-04/phase-review.log",
+      "negative_side_effect_count": 0
+    }
+  ],
+  "review_attempts": [
+    {
+      "attempt": 1,
+      "result": "PASSED",
+      "evidence_path": "artifacts/validation/phase-04/reviewer.md",
+      "fix_summary": "seven findings resolved: four P2 (manifest integrity, non-hermetic migration check, unlimited read path, missing read audit) and three P3 (duplicated detail allowlist, hardcoded step-up window, cookie deletion without Secure)"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "P2",
+      "summary": "Four tests/manifest.yaml Phase-04 entries named a command that could not run: three pointed at files that do not exist and one used -k csrf_or_origin, which matched zero of fourteen tests. Four requirements mapped to no proof, and step-up had twenty passing tests with no manifest entry at all.",
+      "disposition": "RESOLVED",
+      "owner": "Nikola",
+      "target": "Phase 04 finding F-05",
+      "evidence_path": "artifacts/validation/phase-04/manifest-commands.log"
+    },
+    {
+      "severity": "P2",
+      "summary": "make db-migrate-check failed with 'refusing to drop client storage: 1 clients exist'. The check documents itself as hermetic but _clear_fixture_rows knew only the Phase-02 agent schema, while migrations 0003 and 0004 both added data-dependent downgrade guards. A packet-required command broke as soon as the system held real data, and passed until then only because the table was empty.",
+      "disposition": "RESOLVED",
+      "owner": "Nikola",
+      "target": "Phase 04 finding F-06",
+      "evidence_path": "artifacts/validation/phase-04/migration-check.log"
+    },
+    {
+      "severity": "P2",
+      "summary": "client_get never entered the Phase-03 gate, which is where the rate limiter runs, so the one read tool was the only unbounded path. Packet section 12 requires a rate limit per actor and tool.",
+      "disposition": "RESOLVED",
+      "owner": "Nikola",
+      "target": "Phase 04 finding F-07",
+      "evidence_path": "artifacts/validation/phase-04/security-tests.log"
+    },
+    {
+      "severity": "P2",
+      "summary": "client_get wrote no audit row for any outcome, though packet section 8 requires read correlation and audit. An unauthorized or fruitless read writes no client, event or outbox row, so it was the one operation that left no trace of any kind.",
+      "disposition": "RESOLVED",
+      "owner": "Nikola",
+      "target": "Phase 04 finding F-08",
+      "evidence_path": "artifacts/validation/phase-04/security-tests.log"
+    },
+    {
+      "severity": "P3",
+      "summary": "app/mcp/gateway.py carried its own safe-error-detail allowlist instead of app.errors.SAFE_DETAIL_KEYS. It was narrower, so it failed closed, but two allowlists answering one question drift and only one gets reviewed when a key is added.",
+      "disposition": "RESOLVED",
+      "owner": "Nikola",
+      "target": "Phase 04 finding F-09",
+      "evidence_path": "artifacts/validation/phase-04/reviewer.md"
+    },
+    {
+      "severity": "P3",
+      "summary": "POST /auth/step-up returned a literal five-minute window instead of reading STEP_UP_WINDOW, so shortening the window would have left the response advertising time the session does not have.",
+      "disposition": "RESOLVED",
+      "owner": "Nikola",
+      "target": "Phase 04 finding F-10",
+      "evidence_path": "artifacts/validation/phase-04/security-tests.log"
+    },
+    {
+      "severity": "P3",
+      "summary": "logout deleted the session cookie without Secure. A __Host- prefixed cookie is rejected by the browser unless it is Secure, so the deletion was ignored and a dead token stayed in the jar. Server-side revocation was and remains the real control, so no access survived.",
+      "disposition": "RESOLVED",
+      "owner": "Nikola",
+      "target": "Phase 04 finding F-11",
+      "evidence_path": "artifacts/validation/phase-04/security-tests.log"
+    }
+  ],
+  "blockers": [],
+  "evidence": [
+    {
+      "path": "artifacts/validation/phase-04/REVIEW.md",
+      "purpose": "phase review summary, amendments A-4 and A-5, findings and open items for Nikola",
+      "sha256": "cdde66b50cd216c893637ae3d1c903b1849ab756fbc21f0dab2e184504619f2b"
+    },
+    {
+      "path": "artifacts/validation/phase-04/automated-tests.log",
+      "purpose": "make test-unit transcript",
+      "sha256": "e3e77527e7312734cc9bf502d7d6772863c0d2a4005cfed1d5a215550934e858"
+    },
+    {
+      "path": "artifacts/validation/phase-04/changed-files.txt",
+      "purpose": "complete changed-file inventory against the baseline",
+      "sha256": "13a4d88b1bbdc39b23183b28665919f72565bb5e6ccb22938c0087ad40828542"
+    },
+    {
+      "path": "artifacts/validation/phase-04/code-attempts.md",
+      "purpose": "every command attempt including the seven that failed",
+      "sha256": "019f9bdff83e2372973db35d2aa3225b6dc2d141575174e834af8b6029dbd843"
+    },
+    {
+      "path": "artifacts/validation/phase-04/codex-result.json",
+      "purpose": "machine-readable phase result"
+    },
+    {
+      "path": "artifacts/validation/phase-04/contract-tests.log",
+      "purpose": "make test-contract transcript",
+      "sha256": "3518987356bc69ff53599f9f04af1aad01de1f483b51f0e1b2ce01f8a461ef53"
+    },
+    {
+      "path": "artifacts/validation/phase-04/human-uat.md",
+      "purpose": "the exact UAT Nikola still owns, reduced by amendment A-4",
+      "sha256": "313726d5d1764dcb0e7cc60aecf0c5f35f023b563522c8b7e4899fdf6764cf63"
+    },
+    {
+      "path": "artifacts/validation/phase-04/manifest-commands.log",
+      "purpose": "every Phase-04 manifest command run as written",
+      "sha256": "e8e1e7db660896ff1e9bcd7a9ad1f3f803bc799dde38340c8200ddd803cf72c1"
+    },
+    {
+      "path": "artifacts/validation/phase-04/migration-check.log",
+      "purpose": "two consecutive make db-migrate-check runs",
+      "sha256": "3699aa323f4d5b3df728ca549e07bef50507d3fb5b887b4634ee0d6150f7ecc8"
+    },
+    {
+      "path": "artifacts/validation/phase-04/phase-review.log",
+      "purpose": "make phase PHASE=04 transcript",
+      "sha256": "12be99424440cb90ef56002eb35db0876c9be444957919456356a959f43f642f"
+    },
+    {
+      "path": "artifacts/validation/phase-04/reviewer.md",
+      "purpose": "scope, architecture, contract, migration and recovery review",
+      "sha256": "c9dce4fa3af698e1e0a710d27b4806b7fba1e7e5d5e19978419712a33fbafedc"
+    },
+    {
+      "path": "artifacts/validation/phase-04/security-review.md",
+      "purpose": "identity, audience, order, disclosure, secrets and replay review",
+      "sha256": "7c21f0c11a7b0f44e2c4fd51ef83ae1f01db4adb99d27490d7aa5a227a80a775"
+    },
+    {
+      "path": "artifacts/validation/phase-04/security-tests.log",
+      "purpose": "make test-security transcript",
+      "sha256": "fcb3a98a99046f0a59a97ec1de3100bfe1e958210b14e6ff5c41acbab4c18f03"
+    },
+    {
+      "path": "artifacts/validation/phase-04/static-checks.log",
+      "purpose": "git, lint, format-check and typecheck transcript",
+      "sha256": "29a8d0abee8713f5ef7f4bd80650e1f471a9c47ea534ae2aaff0cc39aac3fd29"
+    },
+    {
+      "path": "artifacts/validation/phase-04/test-audit.md",
+      "purpose": "manifest integrity, vacuity check and the two strengthened assertions",
+      "sha256": "51a6da35df1165a7226443fadf7ea9e458e12a20dfa30aee0b632452f699640c"
+    }
+  ],
+  "human_uat": {
+    "required_ids": [
+      "P04-UAT-01",
+      "P04-UAT-02",
+      "P04-UAT-03"
+    ],
+    "status": "PENDING",
+    "reviewer": "Nikola"
+  },
+  "known_limitations": [
+    {
+      "summary": "The Auth0 step-up round trip is not implemented. No Auth0 tenant is configured and the project forbids production credentials in tests, so Auth0StepUpVerifier.verify raises NotImplementedError rather than returning a stub that would make the suite green while the control did not exist. The factor policy, the five-minute window, the recording and the per-request derivation are all real and tested.",
+      "owner": "Nikola",
+      "target": "whichever phase provisions the Auth0 tenant"
+    },
+    {
+      "summary": "No financial capability exists. Amendment A-4 removed the offer, invoice and payment tools, their tables and their status enums from Phase 04 pending an accepted HD-004 ADR. _assert_phase04_boundary in the migration check actively asserts those tables do not exist.",
+      "owner": "Nikola",
+      "target": "a later phase, number and branch to be assigned"
+    },
+    {
+      "summary": "Amendments A-3, A-4 and A-5 all carry open signature lines. A-3 extended the migration validator and one Phase-01 grant assertion additively; A-4 is the descope itself; A-5 lists six paths touched outside the literal allowlist.",
+      "owner": "Nikola",
+      "target": "human review of Phase 04"
+    },
+    {
+      "summary": "make phase accepts only PHASE=01 through 04 and will need extending for Phase 05.",
+      "owner": "Nikola",
+      "target": "Phase 05"
+    }
+  ]
+}

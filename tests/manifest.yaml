@@ -391,6 +391,70 @@ tests:
     owner: Nikola
     evidence_path: "artifacts/validation/phase-03/security-tests.log"
 
+  - id: P04-AUTH-001
+    phase: "04"
+    requirement_ids: [ARCH-005, ARCH-014]
+    level: integration
+    type: security
+    command: "pytest -q backend/tests/security/auth/test_session_boundary.py"
+    fixture: "backend/tests/integration/approvals/support.py"
+    preconditions: ["HD-001/002 accepted", "seeded tenant with roles"]
+    input: "requests with no cookie, a forged cookie, a revoked session, and a valid session"
+    expected_result: "absent, forged, expired and revoked are one indistinguishable 401"
+    expected_state: "roles and permissions resolved from PostgreSQL on every request"
+    expected_side_effect: "session row create/revoke only"
+    negative_assertion: ["no claim in the cookie", "no role from the request body", "no detail in the 401"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-04/security-tests.log"
+
+  - id: P04-AUTH-002
+    phase: "04"
+    requirement_ids: [ARCH-005]
+    level: integration
+    type: security
+    command: "pytest -q backend/tests/security/auth/test_session_boundary.py -k 'csrf or origin'"
+    fixture: "backend/tests/integration/approvals/support.py"
+    preconditions: ["valid session"]
+    input: "state-changing request without a CSRF token, and one from a foreign origin"
+    expected_result: "CSRF_FAILED 403 in both cases; the correct pair reaches the endpoint"
+    expected_state: "no mutation reached any endpoint"
+    expected_side_effect: "none"
+    negative_assertion: ["no protected execution", "GET never requires a token"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-04/security-tests.log"
+
+  - id: P04-AUTH-003
+    phase: "04"
+    requirement_ids: [ARCH-014, ARCH-015]
+    level: unit
+    type: security
+    command: "pytest -q backend/tests/security/auth/test_session_boundary.py -k production"
+    fixture: "none"
+    preconditions: ["production-like settings"]
+    input: "development login under production configuration; loopback and non-https production origins"
+    expected_result: "404 for the login; construction refuses an unusable production origin"
+    expected_state: "no session minted"
+    expected_side_effect: "none"
+    negative_assertion: ["dev login unreachable in production", "origin check cannot be defeated by configuration"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-04/security-tests.log"
+
+  - id: P04-AUTH-004
+    phase: "04"
+    requirement_ids: [ARCH-005, ARCH-014]
+    level: integration
+    type: security
+    command: "pytest -q backend/tests/security/auth/test_step_up.py"
+    fixture: "backend/tests/integration/mcp/support.py"
+    preconditions: ["ADR-004 Amendment 2 signed 2026-08-21", "seeded tenant with OWNER, DEPUTY, OPERATOR and VIEWER"]
+    input: "TOTP and WebAuthn evidence per role, a moved server clock, a second session, and bodies claiming an assurance"
+    expected_result: "OWNER and DEPUTY refuse TOTP; assurance expires at five minutes on the server clock"
+    expected_state: "step_up_at recorded on the session row, never on the user"
+    expected_side_effect: "one session update per proven factor"
+    negative_assertion: ["no assurance from the request body", "no sms or email factor", "no future or backwards step_up_at"]
+    owner: Nikola
+    evidence_path: "artifacts/validation/phase-04/security-tests.log"
+
   - id: P04-001
     phase: "04"
     requirement_ids: [ARCH-008, ARCH-013]
@@ -412,7 +476,7 @@ tests:
     requirement_ids: [ARCH-008]
     level: integration
     type: security
-    command: "pytest -q backend/tests/security/mcp/test_gateway.py::test_unknown_generic_and_forged_audience_fail"
+    command: "pytest -q backend/tests/security/mcp/test_tool_boundary.py -k 'generic_or_unknown or forged_audience or undeclared_argument'"
     fixture: "backend/tests/fixtures/mcp/forged-calls.yaml"
     preconditions: ["gateway initialized"]
     input: "call execute_sql, unknown tool and valid tool with forged audience"
@@ -428,7 +492,7 @@ tests:
     requirement_ids: [ARCH-005, ARCH-006]
     level: integration
     type: security
-    command: "pytest -q backend/tests/security/business/test_denials.py::test_tenant_and_policy_denials_have_zero_effect"
+    command: "pytest -q backend/tests/security/mcp/test_tool_boundary.py -k 'foreign_tenant or unauthorized_actor'"
     fixture: "backend/tests/fixtures/business/denied-client-write.yaml"
     preconditions: ["tenant A/B", "policy deny fixture"]
     input: "cross-tenant ID and policy-denied client write"
@@ -444,7 +508,7 @@ tests:
     requirement_ids: [ARCH-004]
     level: integration
     type: concurrency
-    command: "pytest -q backend/tests/integration/business/test_client_tools.py::test_duplicate_client_create_commits_once"
+    command: "pytest -q backend/tests/integration/mcp/test_client_tools.py::test_ten_identical_calls_produce_one_client"
     fixture: "backend/tests/fixtures/business/client-create.json"
     preconditions: ["authorized exact request", "ten workers"]
     input: "call client_create ten times with same key"
@@ -456,7 +520,8 @@ tests:
     evidence_path: "artifacts/validation/phase-04/phase-review.log"
 
   - id: P04-005
-    phase: "04"
+    phase: "deferred"
+    deferred_by: "phase-04 ExecPlan amendment A-4, Nikola 2026-08-22; awaits an accepted HD-004 ADR"
     requirement_ids: [HD-004, ARCH-013]
     level: unit
     type: business-calculation
@@ -472,7 +537,8 @@ tests:
     evidence_path: "artifacts/validation/phase-04/automated-tests.log"
 
   - id: P04-006
-    phase: "04"
+    phase: "deferred"
+    deferred_by: "phase-04 ExecPlan amendment A-4, Nikola 2026-08-22; awaits an accepted HD-004 ADR"
     requirement_ids: [HD-004, ARCH-007]
     level: integration
     type: security
@@ -488,7 +554,8 @@ tests:
     evidence_path: "artifacts/validation/phase-04/security-tests.log"
 
   - id: P04-007
-    phase: "04"
+    phase: "deferred"
+    deferred_by: "phase-04 ExecPlan amendment A-4, Nikola 2026-08-22; awaits an accepted HD-004 ADR"
     requirement_ids: [HD-004, ARCH-004]
     level: integration
     type: concurrency
@@ -504,7 +571,8 @@ tests:
     evidence_path: "artifacts/validation/phase-04/phase-review.log"
 
   - id: P04-008
-    phase: "04"
+    phase: "deferred"
+    deferred_by: "phase-04 ExecPlan amendment A-4, Nikola 2026-08-22; awaits an accepted HD-004 ADR; the ARCH-004 unknown-result invariant it names is proven for delivered scope by P04-004 and by test_a_repeat_after_success_reports_a_replay"
     requirement_ids: [ARCH-004, ARCH-015]
     level: integration
     type: failure-recovery

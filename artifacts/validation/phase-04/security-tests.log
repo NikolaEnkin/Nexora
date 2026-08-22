@@ -1,0 +1,13 @@
+$ make test-security
+ Container nexora-foundation-redis-1 Running 
+ Container nexora-foundation-postgres-1 Running 
+ Container nexora-foundation-postgres-1 Waiting 
+ Container nexora-foundation-redis-1 Waiting 
+ Container nexora-foundation-redis-1 Healthy 
+ Container nexora-foundation-postgres-1 Healthy 
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+........................................................................ [ 63%]
+.........................................                                [100%]
+113 passed, 200 deselected in 15.33s
+exit=0

@@ -2,6 +2,7 @@ import secrets
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Literal
 from uuid import UUID, uuid4
 
 from sqlalchemy import text
@@ -12,10 +13,12 @@ from app.db import set_request_context
 from app.errors import AuthenticationRequired
 from app.identity.session import (
     IDLE_TIMEOUT,
+    STEP_UP_WINDOW,
     calculate_session_expiry,
     hash_session_token,
     issue_session_token,
 )
+from app.identity.step_up import StepUpFactor
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,6 +27,34 @@ class SessionCredentials:
     csrf_token: str = field(repr=False)
     idle_expires_at: datetime
     absolute_expires_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class ResolvedSession:
+    """A resolved session plus the stored CSRF hash.
+
+    `validate_csrf_and_origin` needs the stored hash, and `resolve` already reads
+    it but does not return it. Phase 04 adds this rather than changing `resolve`,
+    whose exact signature and behaviour Phase-01 tests assert (amendment A-1:
+    additive only).
+
+    The hash never leaves the server and is not part of `ActorContext`, so it
+    cannot travel into a trace, an audit payload or a stream event.
+    """
+
+    actor: ActorContext
+    csrf_hash: str = field(repr=False)
+
+
+def _assurance(step_up_at: datetime | None, now: datetime) -> Literal["standard", "step_up"]:
+    """`ADR-004` §4 — derived, never stored, never supplied by a caller.
+
+    `NULL` means the session never proved a factor, which resolves to `standard`.
+    That is the fail-closed default and the value every session starts with.
+    """
+    if step_up_at is None or now - step_up_at >= STEP_UP_WINDOW:
+        return "standard"
+    return "step_up"
 
 
 @dataclass(slots=True)
@@ -114,16 +145,20 @@ class PostgresSessionStore:
             if not role_rows:
                 raise AuthenticationRequired
             refreshed_idle = min(now + IDLE_TIMEOUT, row["absolute_expires_at"])
-            refreshed = session.execute(
-                text(
-                    """UPDATE auth_sessions SET last_seen_at = :now,
+            refreshed = (
+                session.execute(
+                    text(
+                        """UPDATE auth_sessions SET last_seen_at = :now,
                     idle_expires_at = :idle_expires_at, updated_at = :now
                     WHERE token_hash = :token_hash AND status = 'ACTIVE'
                       AND idle_expires_at > :now AND absolute_expires_at > :now
-                    RETURNING id"""
-                ),
-                {"now": now, "idle_expires_at": refreshed_idle, "token_hash": token_hash},
-            ).scalar_one_or_none()
+                    RETURNING id, step_up_at"""
+                    ),
+                    {"now": now, "idle_expires_at": refreshed_idle, "token_hash": token_hash},
+                )
+                .mappings()
+                .one_or_none()
+            )
             if refreshed is None:
                 raise AuthenticationRequired
             return ActorContext(
@@ -131,10 +166,68 @@ class PostgresSessionStore:
                 actor_id=row["user_id"],
                 subject=row["external_subject"],
                 auth_method="auth0_oidc",
+                assurance=_assurance(refreshed["step_up_at"], now),
                 roles=tuple(sorted({role for role, _permission in role_rows})),
                 permissions=tuple(sorted({permission for _role, permission in role_rows})),
                 correlation_id=correlation_id,
             )
+
+    def resolve_credentials(
+        self, raw_token: str, correlation_id: UUID, now: datetime
+    ) -> ResolvedSession:
+        """Resolve a session and return the stored CSRF hash with it.
+
+        Deliberately a thin wrapper over `resolve` plus one scoped read rather
+        than a second copy of the resolution logic: expiry, revocation, role
+        loading and the idle refresh must have exactly one implementation, or the
+        two would drift and the weaker one would become the real boundary.
+        """
+        actor = self.resolve(raw_token, correlation_id, now)
+        token_hash = hash_session_token(raw_token, self.pepper)
+        with self.sessions() as session, session.begin():
+            set_request_context(session, actor.tenant_id, actor.actor_id)
+            csrf_hash = session.execute(
+                text(
+                    """SELECT csrf_hash FROM auth_sessions
+                    WHERE token_hash = :token_hash AND status = 'ACTIVE'"""
+                ),
+                {"token_hash": token_hash},
+            ).scalar_one_or_none()
+        if csrf_hash is None:
+            raise AuthenticationRequired
+        return ResolvedSession(actor=actor, csrf_hash=str(csrf_hash))
+
+    def record_step_up(
+        self, raw_token: str, actor: ActorContext, factor: StepUpFactor, now: datetime
+    ) -> None:
+        """Stamp the session with a proven factor.
+
+        The value is the server's own clock, never the provider's claim: a
+        provider that reported a future `auth_time` would otherwise extend the
+        window. A database trigger refuses a future or backwards value as well,
+        so a defect here still cannot widen it.
+        """
+        token_hash = hash_session_token(raw_token, self.pepper)
+        with self.sessions() as session, session.begin():
+            set_request_context(session, actor.tenant_id, actor.actor_id)
+            updated = session.execute(
+                text(
+                    """UPDATE auth_sessions
+                    SET step_up_at = :now, step_up_factor = :factor, updated_at = :now
+                    WHERE token_hash = :token_hash AND status = 'ACTIVE'
+                      AND user_id = :actor_id
+                      AND idle_expires_at > :now AND absolute_expires_at > :now
+                    RETURNING id"""
+                ),
+                {
+                    "now": now,
+                    "factor": factor.value,
+                    "token_hash": token_hash,
+                    "actor_id": actor.actor_id,
+                },
+            ).scalar_one_or_none()
+        if updated is None:
+            raise AuthenticationRequired
 
     def revoke(self, raw_token: str, actor_id: UUID, now: datetime) -> None:
         token_hash = hash_session_token(raw_token, self.pepper)

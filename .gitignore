@@ -14,4 +14,22 @@ build/
 coverage.xml
 htmlcov/
 artifacts/validation/**/secrets/
-PROJECT_GUIDE_BG.md
+
+# Every Markdown file, anywhere. Nikola's decision, 2026-08-22.
+#
+# This covers the governance the project runs on — CLAUDE.md, START_HERE.md,
+# PROJECT_PLAN.md, PHASE_STATUS.md, docs/adr, docs/phases, docs/prompts,
+# docs/execplans — and the .md half of every evidence package. The files stay on
+# disk and the workflow is unaffected locally; they simply stop being published.
+#
+# Two consequences to know about rather than discover:
+#   * codex-result.json still lists REVIEW.md, human-uat.md and the rest as
+#     evidence, with their hashes. validate_phase_result.py checks those files
+#     exist, so it passes here and would fail on a fresh clone.
+#   * a fresh clone has no packets, no ADRs and no agent rules, so no phase can
+#     be executed from one. The working copy is the only complete copy — it is
+#     not backed up by this repository any more.
+*.md
+
+# The phase-executor skill. Nikola's decision, 2026-08-22.
+.claude/skills/phase-executor/
